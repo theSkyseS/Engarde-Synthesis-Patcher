@@ -1,0 +1,10 @@
+{
+  "Nickname": "Engardeportingattempts",
+  "Visibility": "Exclude",
+  "OneLineDescription": "",
+  "LongDescription": "",
+  "PreferredAutoVersioning": "Default",
+  "RequiredMods": [
+    "Engarde.esp"
+  ]
+}
