@@ -20,7 +20,7 @@ namespace Engardeportingattempts
 		public bool dragonTweaks = true;
 
 		public bool powerAttackTweaks = true;
-		public int powerAttackCooldown = 5;
+		public short powerAttackCooldown = 5;
 		public int injuryTimeMultiplier = 1;
 		public bool defensiveActions  = true;
 		public string heavyArmorDodge = "roll";

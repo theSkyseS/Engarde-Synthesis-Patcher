@@ -135,7 +135,6 @@ namespace Engardeportingattempts
         {
 
             Dictionary<string, FormKey> mct_keywords;
-            Dictionary<string, IGlobalShortGetter> globals = new Dictionary<string, IGlobalShortGetter>();
 
             if (state.LoadOrder.TryGetIfEnabled(Engarde, out var listing))
             {
@@ -146,8 +145,16 @@ namespace Engardeportingattempts
                 throw new Exception("Engarde.esp not active in your load order or doesn`t exist!");
             }
 
+            PatchGlobals(state);
+            PatchArmor(state, mct_keywords);
 
-            foreach(var globalID in globalIDs)
+        }
+
+        private static void PatchGlobals(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            Dictionary<string, IGlobalShortGetter> globals = new Dictionary<string, IGlobalShortGetter>();
+
+            foreach (var globalID in globalIDs)
             {
                 FormKey globalForm = Engarde.MakeFormKey(globalID.Item2);
                 if (!state.LinkCache.TryResolve<IGlobalShortGetter>(globalForm, out var globalLink))
@@ -155,8 +162,7 @@ namespace Engardeportingattempts
                 globals.Add(globalLink.EditorID!, globalLink);
             }
 
-            IGlobalShortGetter? global;
-            if (globals.TryGetValue("MCT_SprintToSneakEnabled", out global))
+            if (globals.TryGetValue("MCT_SprintToSneakEnabled", out var global))
             {
                 if (Settings.Value.sprintToSneak)
                 {
@@ -168,41 +174,70 @@ namespace Engardeportingattempts
                 }
             }
 
-
-            if (Settings.Value.fixAttackSpeed)
+            if (globals.TryGetValue("MCT_AttackSpeedFixEnabled", out global))
             {
-                if (globals.TryGetValue("MCT_AttackSpeedFixEnabled", out global))
+                if (Settings.Value.fixAttackSpeed)
                 {
                     ChangeGlobalShortValue(state, global, 1);
                 }
-            }
-            else
-            {
-                if (globals.TryGetValue("MCT_AttackSpeedFixEnabled", out global))
+                else
                 {
                     ChangeGlobalShortValue(state, global, 0);
                 }
             }
 
-            if (Settings.Value.basicAttackTweaks)
+            if (globals.TryGetValue("MCT_PlayerAttackControlEnabled", out global))
             {
-                if (globals.TryGetValue("MCT_PlayerAttackControlEnabled", out global))
+                if (Settings.Value.basicAttackTweaks)
                 {
                     ChangeGlobalShortValue(state, global, 1);
                 }
-            }
-            else
-            {
-                if (globals.TryGetValue("MCT_PlayerAttackControlEnabled", out global))
+                else
                 {
                     ChangeGlobalShortValue(state, global, 0);
                 }
             }
 
-            PatchArmor(state, mct_keywords);
+            if (globals.TryGetValue("MCT_PowerAttackControlEnabled", out global))
+            {
+                if (Settings.Value.powerAttackTweaks)
+                {
+                    ChangeGlobalShortValue(state, global, 1);
+                }
+                else
+                {
+                    ChangeGlobalShortValue(state, global, 0);
+                }
+            }
+            if (globals.TryGetValue("MCT_StaggerByArrowEnabled", out global))
+            {
+                if (Settings.Value.bowStagger)
+                {
+                    ChangeGlobalShortValue(state, global, 1);
+                }
+                else
+                {
+                    ChangeGlobalShortValue(state, global, 0);
+                }
+            }
 
+            if (globals.TryGetValue("MCT_CGOIntegrationEnabled", out global))
+            {
+                if (state.LoadOrder.TryGetIfEnabled(ModKey.FromNameAndExtension("DSerCombatGameplayOverhaul.esp"), out _))
+                {
+                    ChangeGlobalShortValue(state, global, 1);
+                }
+                else
+                {
+                    ChangeGlobalShortValue(state, global, 0);
+                }
+            }
+
+            if (globals.TryGetValue("MCT_StaggerByArrowEnabled", out global))
+            {
+                ChangeGlobalShortValue(state, global, Settings.Value.powerAttackCooldown);
+            }
         }
 
-       
     }
 }
