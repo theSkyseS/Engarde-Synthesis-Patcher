@@ -31,15 +31,32 @@ namespace Engardeportingattempts
                     }
                 });
         }
+
+        private static readonly (string, uint)[] globalIDs =
+        {
+            ("sprintToSneak", 0x289FB6),
+            ("attackSpeedFix", 0x24747E),
+            ("playerAttackControl", 0x24644D),
+            ("powerAttackControl", 0x24644E),
+            ("staggerByArrow", 0x2551A0),
+            ("powerAttackCooldown", 0x2659C0),
+            ("CGOIntegration", 0x28A519)
+        };
+
+        private static void ChangeGlobalShortValue(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, IGlobalGetter global, short? value)
+        {
+            var globalCopy = state.PatchMod.Globals.GetOrAddAsOverride(global);
+            var globalShort = (IGlobalShort)globalCopy;
+            globalShort.Data = value;
+        }
+
         private static void PatchArmor(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, Dictionary<string, FormKey> mct_keywords)
         {
             foreach (var armor in state.LoadOrder.PriorityOrder.WinningOverrides<IArmorGetter>())
             {
-                if (!armor.TemplateArmor.IsNull)
-                {
-                    continue;
-                }
-                if (!armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? true)
+                if (armor.MajorFlags.HasFlag(Armor.MajorFlag.NonPlayable)
+                    || !armor.TemplateArmor.IsNull
+                    || (!armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? true))
                 {
                     continue;
                 }
@@ -113,43 +130,6 @@ namespace Engardeportingattempts
              "MCT_DefensiveAttack", 0x2936A2
              "MCT_SweepAttack", 0x294169
         };*/
-        private static void ChangeGlobalShortValue(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, IGlobalGetter global, short? value)
-        {
-                var globalCopy = state.PatchMod.Globals.GetOrAddAsOverride(global);
-                var globalShort = (IGlobalShort)globalCopy;
-                globalShort.Data = value;
-        }
-
-        private static readonly (string, uint)[] globalIDs =
-        {
-            ("sprintToSneak", 0x289FB6),
-            ("attackSpeedFix", 0x24747E),
-            ("playerAttackControl", 0x24644D),
-            ("powerAttackControl", 0x24644E),
-            ("staggerByArrow", 0x2551A0),
-            ("powerAttackCooldown", 0x2659C0),
-            ("CGOIntegration", 0x28A519)
-        };
-
-        public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
-        {
-
-            Dictionary<string, FormKey> mct_keywords;
-
-            if (state.LoadOrder.TryGetIfEnabled(Engarde, out var listing))
-            {
-                mct_keywords = listing.Mod!.Keywords.ToDictionary(x => x.EditorID!, x => x.FormKey);
-            }
-            else
-            {
-                throw new Exception("Engarde.esp not active in your load order or doesn`t exist!");
-            }
-
-            PatchGlobals(state);
-            PatchArmor(state, mct_keywords);
-
-        }
-
         private static void PatchGlobals(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             Dictionary<string, IGlobalShortGetter> globals = new Dictionary<string, IGlobalShortGetter>();
@@ -238,6 +218,28 @@ namespace Engardeportingattempts
                 ChangeGlobalShortValue(state, global, Settings.Value.powerAttackCooldown);
             }
         }
+
+
+        public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+
+            Dictionary<string, FormKey> mct_keywords;
+
+            if (state.LoadOrder.TryGetIfEnabled(Engarde, out var listing))
+            {
+                mct_keywords = listing.Mod!.Keywords.ToDictionary(x => x.EditorID!, x => x.FormKey);
+            }
+            else
+            {
+                throw new Exception("Engarde.esp not active in your load order or doesn`t exist!");
+            }
+
+            PatchGlobals(state);
+            PatchArmor(state, mct_keywords);
+            
+        }
+
+       
 
     }
 }
