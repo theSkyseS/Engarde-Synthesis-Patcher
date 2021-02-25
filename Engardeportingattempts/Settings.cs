@@ -44,14 +44,14 @@ namespace Engardeportingattempts
 		public int twoHandSpeed = 220;
 		public int bowSpeed = 240;
 
-		public double unarmedReachMult = 0.8;
-		public double unarmedDamageMult = 2;
+		public float unarmedReachMult = 0.8f;
+		public float unarmedDamageMult = 2f;
 
-		public double weaponSpeedMult = 1;
-		public double weaponReachMult = 0.7;
-		public double weaponDamageMult = 2;
-		public double weaponCritDamageMult = 1;
-		//public double enchantMult = 1.5;
+		public float weaponSpeedMult = 1f;
+		public float weaponReachMult = 0.7f;
+		public float weaponDamageMult = 2f;
+		public float weaponCritDamageMult = 1f;
+		//public float enchantMult = 1.5f;
 
 		public bool permanentCombatFocus = false;
     }

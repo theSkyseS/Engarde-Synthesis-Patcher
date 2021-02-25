@@ -49,6 +49,28 @@ namespace Engardeportingattempts
             var globalShort = (IGlobalShort)globalCopy;
             globalShort.Data = value;
         }
+        private static void AddKeyword(FormKey keywordForm, IKeyworded<IKeywordGetter> keyworded)
+        {
+            if (keyworded.Keywords == null)
+            {
+                keyworded.Keywords = new ExtendedList<IFormLink<IKeywordGetter>>();
+            }
+            keyworded.Keywords.Add(keywordForm);
+        }
+        private static void SetStagger(IWeapon weaponCopy, int defaultWeight, float multiplier)
+        {
+            float weight = weaponCopy.BasicStats!.Weight;
+            if (weight <= 0)
+            {
+                weaponCopy.BasicStats!.Weight = defaultWeight;
+            }
+            weaponCopy.Data!.Stagger = weight * 0.01f * multiplier;
+        }
+
+        private static void SetCritDamage(IWeapon weaponCopy, float multiplier)
+        {
+            weaponCopy.Critical!.Damage = (ushort)Math.Round(weaponCopy.BasicStats!.Damage * multiplier);
+        }
 
         private static void PatchArmor(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, Dictionary<string, FormKey> mct_keywords)
         {
@@ -236,10 +258,72 @@ namespace Engardeportingattempts
 
             PatchGlobals(state);
             PatchArmor(state, mct_keywords);
-            
+
+            if(!state.LinkCache.TryResolve<ISpellGetter>(Engarde.MakeFormKey(0x23BCE7), out var critAttackSpell))
+            {
+                throw new Exception($"Crit Attack spell ID:xx23BCE7 not found, check your Engarde.esp");
+            }
+            foreach (var weapon in state.LoadOrder.PriorityOrder.WinningOverrides<IWeaponGetter>())
+            {
+                if (!weapon.Template.IsNull || weapon.Data == null)
+                {
+                    continue;
+                }
+                var weaponCopy = state.PatchMod.Weapons.GetOrAddAsOverride(weapon);
+                weaponCopy.Data!.Speed *= Settings.Value.weaponSpeedMult;
+                weaponCopy.Data!.Reach *= Settings.Value.weaponReachMult;
+                ushort damage = weaponCopy.BasicStats!.Damage;
+                weaponCopy.BasicStats!.Damage = (ushort)Math.Round(damage * Settings.Value.weaponDamageMult);
+                if (weaponCopy.BasicStats.Weight == 0)
+                {
+                    weaponCopy.BasicStats.Weight = 4;
+                }
+                if (Settings.Value.critStagger && (weaponCopy.Critical?.Effect.IsNull ?? false))
+                {
+                    weaponCopy.Critical.Effect = critAttackSpell.AsLink();
+                }
+                if(weaponCopy.Data.AnimationType == WeaponAnimationType.HandToHand)
+                {
+                    if(weaponCopy.Data.Flags.HasFlag(WeaponData.Flag.BoundWeapon))
+                    {
+                        weaponCopy.BasicStats.Weight = 2;
+                        mct_keywords.TryGetValue("MCT_PenetratesArmorKW", out var keyword);
+                        AddKeyword(keyword, weaponCopy);
+                    }
+
+                    if(weaponCopy.EditorID == "HRI_Lycan_Weapon_UnarmedWereformWeapon")
+                    {
+                        weaponCopy.BasicStats.Weight = 4;
+                        if(mct_keywords.TryGetValue("MCT_WeakAgainstArmored", out var keyword))
+                        {
+                            AddKeyword(keyword, weaponCopy);
+                        }
+                    }
+                }
+                else if (weaponCopy.Data.AnimationType == WeaponAnimationType.OneHandSword)
+                {
+                    if (weaponCopy.Data.Flags.HasFlag(WeaponData.Flag.BoundWeapon))
+                    {
+                        weaponCopy.BasicStats.Weight = 8;
+                        if(mct_keywords.TryGetValue("MCT_PenetratesArmorKW", out var keyword))
+                        {
+                            AddKeyword(keyword, weaponCopy);
+                        }
+                    } 
+                    else
+                    {
+                        if(mct_keywords.TryGetValue("MCT_WeakAgainstArmored", out var keyword))
+                        {
+                            AddKeyword(keyword, weaponCopy);
+                        }
+                    }
+                    weaponCopy.Data.Reach *= 1.15f;
+                    SetStagger(weaponCopy, 8, 0.85f);
+                    SetCritDamage(weaponCopy, Settings.Value.weaponCritDamageMult);
+                }
+            }
         }
 
-       
-
+        
     }
 }
