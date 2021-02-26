@@ -7,13 +7,16 @@ using Mutagen.Bethesda.Skyrim;
 using System.Threading.Tasks;
 using Noggog;
 
-namespace Engardeportingattempts
+
+//TODO: delete this
+#pragma warning disable CA1416
+namespace Engarde_Synthesis
 {
     public class Program
     {
         private static readonly ModKey Engarde = ModKey.FromNameAndExtension("Engarde.esp");
         private static Dictionary<string, FormKey> _mctKeywords = new Dictionary<string, FormKey>();
-        private static Lazy<Settings> _settings = null!;
+        private static Lazy<Settings.Settings> _settings = null!;
 
         private enum WeaponCritChance
         {
@@ -29,6 +32,7 @@ namespace Engardeportingattempts
             None = 0,
             Strong = 1
         }
+
         public static async Task<int> Main(string[] args)
         {
             return await SynthesisPipeline.Instance
@@ -58,17 +62,19 @@ namespace Engardeportingattempts
             ("CGOIntegration", 0x28A519)
         };
 
-        private static void ChangeGlobalShortValue(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, IGlobalGetter global, short? value)
+        private static void ChangeGlobalShortValue(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
+            IGlobalGetter global, short value)
         {
-            var globalCopy = state.PatchMod.Globals.GetOrAddAsOverride(global);
-            var globalShort = (IGlobalShort)globalCopy;
-            globalShort.Data = value;
+            var globalCopy = (IGlobalShort)state.PatchMod.Globals.GetOrAddAsOverride(global);
+            globalCopy.Data = value;
         }
+
         private static void AddKeyword(FormKey keywordForm, IKeyworded<IKeywordGetter> keyworded)
         {
             keyworded.Keywords ??= new ExtendedList<IFormLink<IKeywordGetter>>();
             keyworded.Keywords.Add(keywordForm);
         }
+
         private static void SetStagger(IWeapon weaponCopy, int defaultWeight, float multiplier)
         {
             float weight = weaponCopy.BasicStats!.Weight;
@@ -76,17 +82,19 @@ namespace Engardeportingattempts
             {
                 weaponCopy.BasicStats!.Weight = defaultWeight;
             }
+
             weaponCopy.Data!.Stagger = weight * 0.01f * multiplier;
         }
 
         private static void SetCritDamage(IWeapon weaponCopy, float multiplier)
         {
-            weaponCopy.Critical!.Damage = (ushort)Math.Round(weaponCopy.BasicStats!.Damage * multiplier);
+            weaponCopy.Critical!.Damage = (ushort) Math.Round(weaponCopy.BasicStats!.Damage * multiplier);
         }
 
         private static void ChangeWeapon(IWeapon weaponCopy, int defaultWeight, float damageMult = 1,
             float reachMult = 1, float speedMult = 1, float critMult = 1, float staggerMult = 1,
-            WeaponCritChance critChance = 0, WeaponArmorPenetration armorPenetration = 0)
+            WeaponCritChance critChance = WeaponCritChance.None,
+            WeaponArmorPenetration armorPenetration = WeaponArmorPenetration.None)
         {
             string critKey = critChance switch
             {
@@ -99,6 +107,7 @@ namespace Engardeportingattempts
             {
                 AddKeyword(keyword, weaponCopy);
             }
+
             if (weaponCopy.Data!.Flags.HasFlag(WeaponData.Flag.BoundWeapon))
             {
                 weaponCopy.BasicStats!.Weight = defaultWeight;
@@ -109,57 +118,68 @@ namespace Engardeportingattempts
             }
             else
             {
-                switch(armorPenetration)
+                switch (armorPenetration)
                 {
                     case WeaponArmorPenetration.Weak:
                         if (_mctKeywords.TryGetValue("MCT_WeakAgainstArmored", out keyword))
                         {
                             AddKeyword(keyword, weaponCopy);
                         }
+
                         break;
                     case WeaponArmorPenetration.Strong:
                         if (_mctKeywords.TryGetValue("MCT_PenetratesArmorKW", out keyword))
                         {
                             AddKeyword(keyword, weaponCopy);
                         }
+
                         break;
                 }
             }
-            weaponCopy.BasicStats!.Damage = (ushort)Math.Round(weaponCopy.BasicStats.Damage * damageMult);
+
+            weaponCopy.BasicStats!.Damage = (ushort) Math.Round(weaponCopy.BasicStats.Damage * damageMult);
             weaponCopy.Data.Speed *= speedMult;
             weaponCopy.Data.Reach *= reachMult;
             SetStagger(weaponCopy, defaultWeight, staggerMult);
-            SetCritDamage(weaponCopy, _settings.Value.weaponCritDamageMult * critMult);
+            SetCritDamage(weaponCopy, _settings.Value.weaponSettings.weaponCritDamageMult * critMult);
         }
 
         private static void PatchArmors(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             foreach (var armor in state.LoadOrder.PriorityOrder.WinningOverrides<IArmorGetter>())
             {
-                if (armor.MajorFlags.HasFlag(Armor.MajorFlag.NonPlayable)
+                if ((armor.BodyTemplate?.Flags.HasFlag(BodyTemplate.Flag.NonPlayable) ?? true)
                     || !armor.TemplateArmor.IsNull
                     || (!armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? true))
                 {
                     continue;
                 }
-                if (armor.BodyTemplate!.ArmorType == ArmorType.LightArmor)
+
+                switch (armor.BodyTemplate!.ArmorType)
                 {
-                    var armorCopy = state.PatchMod.Armors.GetOrAddAsOverride(armor);
-                    armorCopy.Keywords ??= new ExtendedList<IFormLink<IKeywordGetter>>();
-                    _mctKeywords.TryGetValue("MCT_StaggerResist1", out FormKey staggerResistKeyword);
-                    armorCopy.Keywords.Add(staggerResistKeyword);
-                }
-                else if (armor.BodyTemplate!.ArmorType == ArmorType.HeavyArmor)
-                {
-                    var armorCopy = state.PatchMod.Armors.GetOrAddAsOverride(armor);
-                    armorCopy.Keywords ??= new ExtendedList<IFormLink<IKeywordGetter>>();
-                    _mctKeywords.TryGetValue("MCT_StaggerResist2", out FormKey staggerResistKeyword);
-                    _mctKeywords.TryGetValue("MCT_ArmoredKW", out FormKey armoredKeyword);
-                    armorCopy.Keywords.Add(staggerResistKeyword);
-                    armorCopy.Keywords.Add(armoredKeyword);
+                    case ArmorType.LightArmor:
+                    {
+                        var armorCopy = state.PatchMod.Armors.GetOrAddAsOverride(armor);
+                        armorCopy.Keywords ??= new ExtendedList<IFormLink<IKeywordGetter>>();
+                        _mctKeywords.TryGetValue("MCT_StaggerResist1", out FormKey staggerResistKeyword);
+                        armorCopy.Keywords.Add(staggerResistKeyword);
+                        break;
+                    }
+                    case ArmorType.HeavyArmor:
+                    {
+                        var armorCopy = state.PatchMod.Armors.GetOrAddAsOverride(armor);
+                        armorCopy.Keywords ??= new ExtendedList<IFormLink<IKeywordGetter>>();
+                        _mctKeywords.TryGetValue("MCT_StaggerResist2", out FormKey staggerResistKeyword);
+                        _mctKeywords.TryGetValue("MCT_ArmoredKW", out FormKey armoredKeyword);
+                        armorCopy.Keywords.Add(staggerResistKeyword);
+                        armorCopy.Keywords.Add(armoredKeyword);
+                        break;
+                    }
+                    default: continue;
                 }
             }
         }
+
         /*private static readonly (string Key, uint Id)[] keywordsTuple =
         {
             ("MCT_ArmoredKW", 0x0028FF),
@@ -208,90 +228,53 @@ namespace Engardeportingattempts
         };*/
         private static void PatchGlobals(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            Dictionary<string, IGlobalShortGetter> globals = new Dictionary<string, IGlobalShortGetter>();
+            Dictionary<string, IGlobalGetter> globals = new();
 
             foreach (var globalId in GlobalIDs)
             {
                 FormKey globalForm = Engarde.MakeFormKey(globalId.Item2);
-                if (!state.LinkCache.TryResolve<IGlobalShortGetter>(globalForm, out var globalLink))
+                if (!state.LinkCache.TryResolve<IGlobalGetter>(globalForm, out var globalLink))
                     throw new Exception($"Unable to find required global: {globalForm}");
                 globals.Add(globalLink.EditorID!, globalLink);
             }
 
             if (globals.TryGetValue("MCT_SprintToSneakEnabled", out var global))
             {
-                if (_settings.Value.sprintToSneak)
-                {
-                    ChangeGlobalShortValue(state, global, 1);
-                }
-                else
-                {
-                    ChangeGlobalShortValue(state, global, 0);
-                }
+                ChangeGlobalShortValue(state, global, _settings.Value.sprintToSneak ? 1 : 0);
             }
 
             if (globals.TryGetValue("MCT_AttackSpeedFixEnabled", out global))
             {
-                if (_settings.Value.fixAttackSpeed)
-                {
-                    ChangeGlobalShortValue(state, global, 1);
-                }
-                else
-                {
-                    ChangeGlobalShortValue(state, global, 0);
-                }
+                ChangeGlobalShortValue(state, global, _settings.Value.fixAttackSpeed ? 1 : 0);
             }
 
             if (globals.TryGetValue("MCT_PlayerAttackControlEnabled", out global))
             {
-                if (_settings.Value.basicAttackTweaks)
-                {
-                    ChangeGlobalShortValue(state, global, 1);
-                }
-                else
-                {
-                    ChangeGlobalShortValue(state, global, 0);
-                }
+                ChangeGlobalShortValue(state, global, _settings.Value.basicAttacks.basicAttackTweaks ? 1 : 0);
             }
 
             if (globals.TryGetValue("MCT_PowerAttackControlEnabled", out global))
             {
-                if (_settings.Value.powerAttackTweaks)
-                {
-                    ChangeGlobalShortValue(state, global, 1);
-                }
-                else
-                {
-                    ChangeGlobalShortValue(state, global, 0);
-                }
+                ChangeGlobalShortValue(state, global, _settings.Value.powerAttacks.powerAttackTweaks ? 1 : 0);
             }
+
             if (globals.TryGetValue("MCT_StaggerByArrowEnabled", out global))
             {
-                if (_settings.Value.bowStagger)
-                {
-                    ChangeGlobalShortValue(state, global, 1);
-                }
-                else
-                {
-                    ChangeGlobalShortValue(state, global, 0);
-                }
+                ChangeGlobalShortValue(state, global,
+                    _settings.Value.staggerSettings.bowStagger ? (short) 1 : (short) 0);
+            }
+
+            if (globals.TryGetValue("MCT_PowerAttackCoolDownTime", out global))
+            {
+                ChangeGlobalShortValue(state, global, _settings.Value.powerAttacks.powerAttackCooldown);
             }
 
             if (globals.TryGetValue("MCT_CGOIntegrationEnabled", out global))
             {
-                if (state.LoadOrder.TryGetIfEnabled(ModKey.FromNameAndExtension("DSerCombatGameplayOverhaul.esp"), out _))
-                {
-                    ChangeGlobalShortValue(state, global, 1);
-                }
-                else
-                {
-                    ChangeGlobalShortValue(state, global, 0);
-                }
-            }
-
-            if (globals.TryGetValue("MCT_StaggerByArrowEnabled", out global))
-            {
-                ChangeGlobalShortValue(state, global, _settings.Value.powerAttackCooldown);
+                ChangeGlobalShortValue(state, global, state.LoadOrder.TryGetIfEnabled(
+                    ModKey.FromNameAndExtension("DSerCombatGameplayOverhaul.esp"), out _)
+                    ? 1
+                    : 0);
             }
         }
 
@@ -305,95 +288,91 @@ namespace Engardeportingattempts
             {
                 throw new Exception($"Crit Attack spell ID:xx23BCE7 not found, check your Engarde.esp");
             }
+
             foreach (var weapon in state.LoadOrder.PriorityOrder.WinningOverrides<IWeaponGetter>())
             {
                 if (!weapon.Template.IsNull || weapon.Data == null)
                 {
                     continue;
                 }
+
                 var weaponCopy = state.PatchMod.Weapons.GetOrAddAsOverride(weapon);
-                weaponCopy.Data!.Speed *= _settings.Value.weaponSpeedMult;
-                weaponCopy.Data!.Reach *= _settings.Value.weaponReachMult;
+                weaponCopy.Data!.Speed *= _settings.Value.weaponSettings.weaponSpeedMult;
+                weaponCopy.Data!.Reach *= _settings.Value.weaponSettings.weaponReachMult;
                 ushort damage = weaponCopy.BasicStats!.Damage;
-                weaponCopy.BasicStats!.Damage = (ushort)Math.Round(damage * _settings.Value.weaponDamageMult);
+                weaponCopy.BasicStats!.Damage = (ushort) Math.Round(damage * _settings.Value.weaponSettings.weaponDamageMult);
                 if (weaponCopy.BasicStats.Weight == 0)
                 {
                     weaponCopy.BasicStats.Weight = 4;
                 }
-                if (_settings.Value.critStagger && (weaponCopy.Critical?.Effect.IsNull ?? false))
+
+                if (_settings.Value.staggerSettings.critStagger && (weaponCopy.Critical?.Effect.IsNull ?? false))
                 {
                     weaponCopy.Critical.Effect = critAttackSpell.AsLink();
+                    weaponCopy.Critical.Flags = 0;
                 }
-                if (weaponCopy.Data.AnimationType == WeaponAnimationType.HandToHand)
+
+                switch (weaponCopy.Data.AnimationType)
                 {
-                    if (weaponCopy.Data.Flags.HasFlag(WeaponData.Flag.BoundWeapon))
+                    case WeaponAnimationType.HandToHand:
                     {
-                        weaponCopy.BasicStats.Weight = 2;
-                        if (_mctKeywords.TryGetValue("MCT_PenetratesArmorKW", out var keyword))
+                        if (weaponCopy.Data.Flags.HasFlag(WeaponData.Flag.BoundWeapon))
                         {
-                            AddKeyword(keyword, weaponCopy);
+                            weaponCopy.BasicStats.Weight = 2;
+                            if (_mctKeywords.TryGetValue("MCT_PenetratesArmorKW", out var keyword))
+                            {
+                                AddKeyword(keyword, weaponCopy);
+                            }
                         }
-                    }
-                    if (weaponCopy.EditorID == "HRI_Lycan_Weapon_UnarmedWereformWeapon")
-                    {
-                        weaponCopy.BasicStats.Weight = 4;
-                        if (_mctKeywords.TryGetValue("MCT_WeakAgainstArmored", out var keyword))
+
+                        if (weaponCopy.EditorID == "HRI_Lycan_Weapon_UnarmedWereformWeapon")
                         {
-                            AddKeyword(keyword, weaponCopy);
+                            weaponCopy.BasicStats.Weight = 4;
+                            if (_mctKeywords.TryGetValue("MCT_WeakAgainstArmored", out var keyword))
+                            {
+                                AddKeyword(keyword, weaponCopy);
+                            }
                         }
+
+                        break;
                     }
-                }
-                else if (weaponCopy.Data.AnimationType == WeaponAnimationType.OneHandSword)
-                {
-                    ChangeWeapon(weaponCopy, 8, reachMult: 1.15f, staggerMult: 0.85f,
-                                 critChance: WeaponCritChance.Medium, armorPenetration: WeaponArmorPenetration.Weak);
-                }
-                else if (weaponCopy.Data.AnimationType == WeaponAnimationType.OneHandDagger)
-                {
-                    ChangeWeapon(weaponCopy, 3, critMult: 2, critChance: WeaponCritChance.High, armorPenetration: WeaponArmorPenetration.Weak);
-                }
-                else if (weaponCopy.Data.AnimationType == WeaponAnimationType.OneHandAxe)
-                {
-                    ChangeWeapon(weaponCopy, 10, 1.1f, 0.8f, 1.1f);
-                }
-                else if (weaponCopy.Data.AnimationType == WeaponAnimationType.OneHandMace)
-                {
-                    ChangeWeapon(weaponCopy, 12, critMult: 0.5f);
-                }
-                else if (weaponCopy.Data.AnimationType == WeaponAnimationType.TwoHandSword)
-                {
-                    ChangeWeapon(weaponCopy, 14, 0.9f, 1.15f, staggerMult: 1.35f, critChance: WeaponCritChance.Low);
-                }
-                else if (weaponCopy.Data.AnimationType == WeaponAnimationType.TwoHandAxe)
-                {
-                    if (weaponCopy.Keywords?.Contains(warhammerKeyword) ?? false)
-                    {
+                    case WeaponAnimationType.OneHandSword:
+                        ChangeWeapon(weaponCopy, 8, reachMult: 1.15f, staggerMult: 0.85f,
+                            critChance: WeaponCritChance.Medium, armorPenetration: WeaponArmorPenetration.Weak);
+                        break;
+                    case WeaponAnimationType.OneHandDagger:
+                        ChangeWeapon(weaponCopy, 3, critMult: 2, critChance: WeaponCritChance.High,
+                            armorPenetration: WeaponArmorPenetration.Weak);
+                        break;
+                    case WeaponAnimationType.OneHandAxe:
+                        ChangeWeapon(weaponCopy, 10, 1.1f, 0.8f, 1.1f);
+                        break;
+                    case WeaponAnimationType.OneHandMace:
+                        ChangeWeapon(weaponCopy, 12, critMult: 0.5f);
+                        break;
+                    case WeaponAnimationType.TwoHandSword:
+                        ChangeWeapon(weaponCopy, 14, 0.9f, 1.15f, staggerMult: 1.35f, critChance: WeaponCritChance.Low, armorPenetration: WeaponArmorPenetration.Weak);
+                        break;
+                    case WeaponAnimationType.TwoHandAxe when weaponCopy.Keywords?.Contains(warhammerKeyword) ?? false:
                         ChangeWeapon(weaponCopy, 18, 0.9f, speedMult: 0.9f, critMult: 0.5f, staggerMult: 1.65f,
-                                     armorPenetration: WeaponArmorPenetration.Strong);
-                    }
-                    else if (weaponCopy.Keywords?.Contains(battleaxeKeyword) ?? false)
+                            armorPenetration: WeaponArmorPenetration.Strong);
+                        break;
+                    case WeaponAnimationType.TwoHandAxe when weaponCopy.Keywords?.Contains(battleaxeKeyword) ?? false:
                     {
                         ChangeWeapon(weaponCopy, 16, reachMult: 0.8f, speedMult: 1.1f, staggerMult: 1.5f);
+                        break;
                     }
-                }
-                else if (weaponCopy.Data.AnimationType == WeaponAnimationType.Bow)
-                {
-                    if (weaponCopy.EditorID?.ToLower().Contains("crossbow") ?? false)
-                    {
-                        ChangeWeapon(weaponCopy, 12, critMult: 2, staggerMult: 1.5f, armorPenetration: WeaponArmorPenetration.Strong);
-                    }
-                    else
-                    {
+                    case WeaponAnimationType.Crossbow: case WeaponAnimationType.Bow when weaponCopy.EditorID?.ToLower().Contains("crossbow") ?? false:
+                        ChangeWeapon(weaponCopy, 12, critMult: 2, staggerMult: 1.5f,
+                            armorPenetration: WeaponArmorPenetration.Strong);
+                        break;
+                    case WeaponAnimationType.Bow:
                         ChangeWeapon(weaponCopy, 8, armorPenetration: WeaponArmorPenetration.Weak);
-                    }
-                }
-                else if (weaponCopy.Data.AnimationType == WeaponAnimationType.Crossbow)
-                {
-                    ChangeWeapon(weaponCopy, 12, critMult: 2, staggerMult: 1.5f, armorPenetration: WeaponArmorPenetration.Strong);
-                }
-                else if (weaponCopy.Data.AnimationType == WeaponAnimationType.Staff)
-                {
-                    ChangeWeapon(weaponCopy, 8, reachMult: 1.15f, critMult: 0.5f, armorPenetration: WeaponArmorPenetration.Weak);
+                        break;
+                    case WeaponAnimationType.Staff:
+                        ChangeWeapon(weaponCopy, 8, reachMult: 1.15f, critMult: 0.5f,
+                            armorPenetration: WeaponArmorPenetration.Weak);
+                        break;
                 }
             }
         }
