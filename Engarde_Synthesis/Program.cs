@@ -5,6 +5,7 @@ using Mutagen.Bethesda;
 using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.Skyrim;
 using System.Threading.Tasks;
+using Engarde_Synthesis.Settings;
 using Noggog;
 
 
@@ -14,10 +15,75 @@ namespace Engarde_Synthesis
 {
     public class Program
     {
+        #region Statics
+
         private static readonly ModKey Engarde = ModKey.FromNameAndExtension("Engarde.esp");
         private static readonly ModKey Skyrim = ModKey.FromNameAndExtension("Skyrim.esm");
-        private static Dictionary<string, FormKey> _mctKeywords = new Dictionary<string, FormKey>();
+        private static Dictionary<string, FormKey> _mctKeywords = new();
+        private static Dictionary<string, FormKey> _mctSpells = new();
         private static Lazy<Settings.Settings> _settings = null!;
+
+        private static readonly (string, uint)[] GlobalIDs =
+        {
+            ("sprintToSneak", 0x289FB6),
+            ("attackSpeedFix", 0x24747E),
+            ("playerAttackControl", 0x24644D),
+            ("powerAttackControl", 0x24644E),
+            ("staggerByArrow", 0x2551A0),
+            ("powerAttackCooldown", 0x2659C0),
+            ("CGOIntegration", 0x28A519)
+        };
+
+/*private static readonly (string Key, uint Id)[] keywordsTuple =
+        {
+            ("MCT_ArmoredKW", 0x0028FF),
+            ("MCT_WeakAgainstArmored", 0x0E3805),
+            ("MCT_CanCritHigh", 0x0E3806),
+            ("MCT_CanCritMed", 0x111124),
+            ("MCT_CanCritLow", 0x111125),
+            ("MCT_CritImmune", 0x111126
+            "MCT_InjuryAttackSpeed", 0x13EA56
+            "MCT_InjuryBleed", 0x13EA57
+            "MCT_InjuryStun", 0x13EA58
+            "MCT_InjuryKnockDown", 0x13EA59
+            "MCT_InjuryMoveSpeed", 0x13EA5A
+            "MCT_PowerAttackCoolDownKW", 0x22C9DC
+            "MCT_StaggerImmune", 0x24A510
+            "MCT_StaggerResist0", 0x2561C8
+            "MCT_StaggerResist1", 0x2561C9
+            "MCT_StaggerResist2", 0x2561CA
+            "MCT_StaggerResist3", 0x2561CB
+            "MCT_StaggerResist4", 0x2561CC
+            "MCT_StaggerPower0", 0x25775B
+            "MCT_StaggerPower1", 0x25775C
+            "MCT_StaggerPower2", 0x25775D
+            "MCT_StaggerPower3", 0x25775E
+            "MCT_StaggerPower4", 0x25775F
+            "MCT_SprintAttack", 0x26D5A1
+            "MCT_NormalAttackRight", 0x26E067
+            "MCT_NormalAttackLeft", 0x26E068
+            "MCT_StompAttack", 0x2700B5
+            "MCT_GiantRaceKW", 0x270618
+            "MCT_StaminaControlledKW", 0x27210E
+            "MCT_CanEnrage", 0x272675
+            "MCT_InjuryEffect", 0x272BD9
+            "MCT_DragonRaceKW", 0x273140
+            "MCT_DragonTailAttackLeft", 0x27416B
+            "MCT_DragonTailAttackRight", 0x27416D
+            "MCT_DragonTailAttack", 0x27416E
+             "MCT_BlockableSpell", 0x277748
+             "MCT_PowerBlockingKW", 0x27DDB1
+             "MCT_VerticalAttack", 0x2808D7
+             "MCT_PenetratesArmorKW", 0x281901
+             "MCT_WerewolfRaceKW", 0x28DB00
+             "MCT_PaddedKW", 0x0028FD
+             "MCT_DefensiveAttack", 0x2936A2
+             "MCT_SweepAttack", 0x294169
+        };*/
+
+        #endregion
+
+        #region Enums
 
         private enum WeaponCritChance
         {
@@ -33,6 +99,8 @@ namespace Engarde_Synthesis
             None = 0,
             Strong = 1
         }
+
+        #endregion
 
         public static async Task<int> Main(string[] args)
         {
@@ -52,16 +120,7 @@ namespace Engarde_Synthesis
                 });
         }
 
-        private static readonly (string, uint)[] GlobalIDs =
-        {
-            ("sprintToSneak", 0x289FB6),
-            ("attackSpeedFix", 0x24747E),
-            ("playerAttackControl", 0x24644D),
-            ("powerAttackControl", 0x24644E),
-            ("staggerByArrow", 0x2551A0),
-            ("powerAttackCooldown", 0x2659C0),
-            ("CGOIntegration", 0x28A519)
-        };
+        #region Auxiliary Methods
 
         private static void ChangeGlobalShortValue(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
             IGlobalGetter global, short value)
@@ -155,22 +214,27 @@ namespace Engarde_Synthesis
             return attack.AttackData?.Stagger != null && !attack.AttackEvent.IsNullOrEmpty();
         }
 
-        private static void ChangeBasicAttackStats(IAttack attack, int strikeAngle,
+        private static void ChangeBasicAttackStats(IAttack attack, int strikeAngle = -1,
             float strikeChance = float.NaN, float damageMult = 0, float attackAngle = float.NaN)
         {
-            attack.AttackData!.StrikeAngle = strikeAngle;
-            attack.AttackData.DamageMult += damageMult;
+            attack.AttackData!.DamageMult += damageMult;
+            if (strikeAngle != -1)
+            {
+                attack.AttackData.StrikeAngle = strikeAngle;
+            }
+
             if (!float.IsNaN(attackAngle))
             {
                 attack.AttackData.AttackAngle = attackAngle;
             }
+
             if (!float.IsNaN(strikeChance))
             {
                 attack.AttackData.Chance = strikeChance;
             }
         }
 
-        private static void SetGeneralAttackData(IAttack attack, Dictionary<string, FormKey> attackSpells)
+        private static void SetGeneralAttackData(IAttack attack)
         {
             if (!IsValidAttack(attack) || attack.AttackEvent!.Contains("H2H")) return;
             string attackEvent = attack.AttackEvent;
@@ -180,7 +244,7 @@ namespace Engarde_Synthesis
                 if ((attackEvent.Contains("PowerStartLeft") || attackEvent.Contains("PowerStartRight")) &&
                     _settings.Value.basicAttacks.basicAttackTweaks)
                 {
-                    if (attackSpells.TryGetValue("MCT_SidePowerAttackSpell", out FormKey spellKey))
+                    if (_mctSpells.TryGetValue("MCT_SidePowerAttackSpell", out FormKey spellKey))
                     {
                         attack.AttackData.Spell = spellKey;
                     }
@@ -188,7 +252,7 @@ namespace Engarde_Synthesis
                 else if ((attackEvent == "attackPowerStartBackward" || attackEvent == "attackPowerStartBackLeftHand") &&
                          _settings.Value.powerAttacks.powerAttackTweaks)
                 {
-                    if (attackSpells.TryGetValue("MCT_BackPowerAttackSpell", out FormKey spellKey))
+                    if (_mctSpells.TryGetValue("MCT_BackPowerAttackSpell", out FormKey spellKey))
                     {
                         attack.AttackData.Spell = spellKey;
                     }
@@ -198,14 +262,14 @@ namespace Engarde_Synthesis
                 {
                     if (attack.AttackData.Flags.HasFlag(AttackData.Flag.PowerAttack))
                     {
-                        if (attackSpells.TryGetValue("MCT_PowerBashAttackSpell", out FormKey spellKey))
+                        if (_mctSpells.TryGetValue("MCT_PowerBashAttackSpell", out FormKey spellKey))
                         {
                             attack.AttackData.Spell = spellKey;
                         }
                     }
                     else
                     {
-                        if (attackSpells.TryGetValue("MCT_BashAttackSpell", out FormKey spellKey))
+                        if (_mctSpells.TryGetValue("MCT_BashAttackSpell", out FormKey spellKey))
                         {
                             attack.AttackData.Spell = spellKey;
                         }
@@ -214,14 +278,14 @@ namespace Engarde_Synthesis
                 else if (attack.AttackData.Flags.HasFlag(AttackData.Flag.PowerAttack) &&
                          _settings.Value.staggerSettings.weaponStagger)
                 {
-                    if (attackSpells.TryGetValue("MCT_PowerAttackSpell", out FormKey spellKey))
+                    if (_mctSpells.TryGetValue("MCT_PowerAttackSpell", out FormKey spellKey))
                     {
                         attack.AttackData.Spell = spellKey;
                     }
                 }
                 else if (_settings.Value.staggerSettings.weaponStagger)
                 {
-                    if (attackSpells.TryGetValue("MCT_PowerAttackSpell", out FormKey spellKey))
+                    if (_mctSpells.TryGetValue("MCT_PowerAttackSpell", out FormKey spellKey))
                     {
                         attack.AttackData.Spell = spellKey;
                     }
@@ -261,7 +325,7 @@ namespace Engarde_Synthesis
                 {
                     ChangeBasicAttackStats(attack, 50, 1, -0.5f);
                     attack.AttackData.AttackType = Skyrim.MakeFormKey(0x0914E7);
-                    if (attackSpells.TryGetValue("MCT_DualPowerAttackSpell", out FormKey spellKey))
+                    if (_mctSpells.TryGetValue("MCT_DualPowerAttackSpell", out FormKey spellKey))
                     {
                         attack.AttackData.Spell = spellKey;
                     }
@@ -298,36 +362,69 @@ namespace Engarde_Synthesis
                 {
                     if (attackEvent.Contains("PowerStartLeft") || attackEvent.Contains("PowerStartRight"))
                     {
-                        attack.AttackData.StrikeAngle = 65;
-                        attack.AttackData.Chance = 0;
-                        attack.AttackData.DamageMult -= 1;
+                        ChangeBasicAttackStats(attack, 65, 0, -1);
                         attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
                     }
 
                     else if (attackEvent.Contains("Chop"))
                     {
-                        attack.AttackData.StrikeAngle = 25;
+                        ChangeBasicAttackStats(attack, 25);
                         if (_mctKeywords.TryGetValue("MCT_VerticalAttack", out FormKey keyword))
                         {
                             attack.AttackData.AttackType = keyword;
                         }
                     }
 
-                    else if (attackEvent.Contains("attack") && attackEvent.Contains("Start") && attackEvent.Contains("Sprint"))
+                    else if (attackEvent.Contains("attack") && attackEvent.Contains("Start") &&
+                             attackEvent.Contains("Sprint"))
                     {
-                        attack.AttackData.StrikeAngle = 28;
-                        attack.AttackData.Chance = 2;
+                        ChangeBasicAttackStats(attack, 28, 2);
                         if (_mctKeywords.TryGetValue("MCT_SprintAttack", out FormKey keyword))
                         {
                             attack.AttackData.AttackType = keyword;
                         }
                     }
-                    
+
                     break;
                 }
             }
-            
         }
+
+        private static void SetAtronachFrostAttackData(IAttack attack)
+        {
+            if (!IsValidAttack(attack))
+            {
+                return;
+            }
+
+            string attackEvent = attack.AttackEvent!;
+            attack.AttackData!.Spell = _mctSpells["MCT_PowerAttackSpell"];
+            switch (attackEvent)
+            {
+                case "attackPowerStart_ForwardPowerAttack_R1":
+                    ChangeBasicAttackStats(attack, strikeAngle: 5);
+                    attack.AttackData.AttackType = FormLink<IKeywordGetter>.Null;
+                    break;
+                case "attackPowerStart_PowerAttack_L1":
+                    ChangeBasicAttackStats(attack, strikeChance: 0.7f, attackAngle: -15);
+                    break;
+                case "attackStart_Attack_L1":
+                    ChangeBasicAttackStats(attack, strikeChance: 1, attackAngle: -25, damageMult: 0.5f);
+                    attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
+                    break;
+                case "attackStart_Attack_R1":
+                    ChangeBasicAttackStats(attack, strikeAngle:25, strikeChance:1,damageMult:0.5f, attackAngle:5);
+                    attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
+                    break;
+                case "bashPowerStart":
+                    ChangeBasicAttackStats(attack, strikeAngle:65);
+                    break;
+            }
+        }
+
+        #endregion
+
+        #region Patcher Methods
 
         private static void PatchArmors(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
@@ -365,52 +462,6 @@ namespace Engarde_Synthesis
             }
         }
 
-        /*private static readonly (string Key, uint Id)[] keywordsTuple =
-        {
-            ("MCT_ArmoredKW", 0x0028FF),
-            ("MCT_WeakAgainstArmored", 0x0E3805),
-            ("MCT_CanCritHigh", 0x0E3806),
-            ("MCT_CanCritMed", 0x111124),
-            ("MCT_CanCritLow", 0x111125),
-            ("MCT_CritImmune", 0x111126
-            "MCT_InjuryAttackSpeed", 0x13EA56
-            "MCT_InjuryBleed", 0x13EA57
-            "MCT_InjuryStun", 0x13EA58
-            "MCT_InjuryKnockDown", 0x13EA59
-            "MCT_InjuryMoveSpeed", 0x13EA5A
-            "MCT_PowerAttackCoolDownKW", 0x22C9DC
-            "MCT_StaggerImmune", 0x24A510
-            "MCT_StaggerResist0", 0x2561C8
-            "MCT_StaggerResist1", 0x2561C9
-            "MCT_StaggerResist2", 0x2561CA
-            "MCT_StaggerResist3", 0x2561CB
-            "MCT_StaggerResist4", 0x2561CC
-            "MCT_StaggerPower0", 0x25775B
-            "MCT_StaggerPower1", 0x25775C
-            "MCT_StaggerPower2", 0x25775D
-            "MCT_StaggerPower3", 0x25775E
-            "MCT_StaggerPower4", 0x25775F
-            "MCT_SprintAttack", 0x26D5A1
-            "MCT_NormalAttackRight", 0x26E067
-            "MCT_NormalAttackLeft", 0x26E068
-            "MCT_StompAttack", 0x2700B5
-            "MCT_GiantRaceKW", 0x270618
-            "MCT_StaminaControlledKW", 0x27210E
-            "MCT_CanEnrage", 0x272675
-            "MCT_InjuryEffect", 0x272BD9
-            "MCT_DragonRaceKW", 0x273140
-            "MCT_DragonTailAttackLeft", 0x27416B
-            "MCT_DragonTailAttackRight", 0x27416D
-            "MCT_DragonTailAttack", 0x27416E
-             "MCT_BlockableSpell", 0x277748
-             "MCT_PowerBlockingKW", 0x27DDB1
-             "MCT_VerticalAttack", 0x2808D7
-             "MCT_PenetratesArmorKW", 0x281901
-             "MCT_WerewolfRaceKW", 0x28DB00
-             "MCT_PaddedKW", 0x0028FD
-             "MCT_DefensiveAttack", 0x2936A2
-             "MCT_SweepAttack", 0x294169
-        };*/
         private static void PatchGlobals(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             Dictionary<string, IGlobalGetter> globals = new();
@@ -485,7 +536,8 @@ namespace Engarde_Synthesis
                 weaponCopy.Data!.Speed *= _settings.Value.weaponSettings.weaponSpeedMult;
                 weaponCopy.Data!.Reach *= _settings.Value.weaponSettings.weaponReachMult;
                 ushort damage = weaponCopy.BasicStats!.Damage;
-                weaponCopy.BasicStats!.Damage = (ushort) Math.Round(damage * _settings.Value.weaponSettings.weaponDamageMult);
+                weaponCopy.BasicStats!.Damage =
+                    (ushort) Math.Round(damage * _settings.Value.weaponSettings.weaponDamageMult);
                 if (weaponCopy.BasicStats.Weight == 0)
                 {
                     weaponCopy.BasicStats.Weight = 4;
@@ -564,11 +616,72 @@ namespace Engarde_Synthesis
             }
         }
 
+        private static void PatchRaces(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            foreach (IRaceGetter race in state.LoadOrder.PriorityOrder.WinningOverrides<IRaceGetter>())
+            {
+                Race raceCopy = state.PatchMod.Races.GetOrAddAsOverride(race);
+                string behavior = raceCopy.BehaviorGraph.Male?.File ?? raceCopy.BehaviorGraph.Female?.File ?? "";
+                raceCopy.AngularAccelerationRate = _settings.Value.npcSettings.angularAccelerationMult * 0.25f;
+                raceCopy.UnarmedReach = _settings.Value.npcSettings.unarmedReachMult * 96;
+                raceCopy.UnarmedDamage *= _settings.Value.npcSettings.unarmedDamageMult;
+
+                raceCopy.ActorEffect ??= new ExtendedList<IFormLink<IASpellGetter>>();
+                if (_settings.Value.fixAttackSpeed &&
+                    _mctSpells.TryGetValue("MCT_BaseWeaponSpeedMultSpell", out FormKey baseAttackSpeedSpell))
+                {
+                    raceCopy.ActorEffect.Add(baseAttackSpeedSpell);
+                }
+
+                if (_settings.Value.staggerSettings.bowStagger &&
+                    _mctSpells.TryGetValue("MCT_DefaultRaceSpell", out FormKey defaultRaceSpell))
+                {
+                    raceCopy.ActorEffect.Add(defaultRaceSpell);
+                }
+
+                if (raceCopy.EditorID != "WerewolfBeastRace")
+                {
+                    raceCopy.Attacks.ForEach(SetGeneralAttackData);
+                }
+
+                if (raceCopy.HasKeyword("ActorTypeNPC", state.LinkCache))
+                {
+                    raceCopy.Keywords!.Add(_mctKeywords["MCT_StaggerResist1"]);
+                    raceCopy.Keywords.Add(_mctKeywords["MCT_InjuryAttackSpeed"]);
+                    raceCopy.ActorEffect ??= new ExtendedList<IFormLink<IASpellGetter>>();
+                    raceCopy.ActorEffect.Add(_mctSpells["MCT_DefaultRaceSpell"]);
+                }
+
+                if (raceCopy.HasKeyword("ActorTypeUndead", state.LinkCache))
+                {
+                    raceCopy.Keywords!.Add(_mctKeywords["MCT_CritImmune"]);
+                }
+
+                if (behavior == "Actors\\AtronachFrost\\AtronachFrostProject.hkx")
+                {
+                    raceCopy.ActorEffect.Remove(_mctSpells["MCT_DefaultRaceSpell"]);
+                    raceCopy.Keywords ??= new ExtendedList<IFormLink<IKeywordGetter>>();
+                    raceCopy.Keywords.Add(_mctKeywords["MCT_ArmoredKW"]);
+                    if (_settings.Value.npcSettings.addArmorToArmored)
+                    {
+                        raceCopy.ActorEffect.Add(_mctKeywords["MCT_BonusArmor500"]);
+                    }
+
+                    raceCopy.AngularAccelerationRate = 0.75f * _settings.Value.npcSettings.angularAccelerationMult;
+                    raceCopy.UnarmedReach = 196 * _settings.Value.npcSettings.unarmedReachMult;
+                    raceCopy.Attacks.ForEach(SetAtronachFrostAttackData);
+                }
+            }
+        }
+
+        #endregion
+
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             if (state.LoadOrder.TryGetIfEnabled(Engarde, out var listing))
             {
                 _mctKeywords = listing.Mod!.Keywords.ToDictionary(x => x.EditorID!, x => x.FormKey);
+                _mctSpells = listing.Mod!.Spells.ToDictionary(x => x.EditorID!, x => x.FormKey);
             }
             else
             {
@@ -580,26 +693,6 @@ namespace Engarde_Synthesis
             PatchWeapons(state);
 
             PatchRaces(state);
-        }
-
-        private static void PatchRaces(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
-        {
-            ISpellGetter baseAttackSpeedSpell = GetSpellFromId(state, 0x194B7C);
-
-            foreach (IRaceGetter race in state.LoadOrder.PriorityOrder.WinningOverrides<IRaceGetter>())
-            {
-                Race raceCopy = state.PatchMod.Races.GetOrAddAsOverride(race);
-
-                raceCopy.AngularAccelerationRate = _settings.Value.npcSettings.angularAccelerationMult * 0.25f;
-                raceCopy.UnarmedReach = _settings.Value.npcSettings.unarmedReachMult * 96;
-                raceCopy.UnarmedDamage *= _settings.Value.npcSettings.unarmedDamageMult;
-
-                if (_settings.Value.fixAttackSpeed)
-                {
-                    raceCopy.ActorEffect ??= new ExtendedList<IFormLink<IASpellGetter>>();
-                    raceCopy.ActorEffect.Add(baseAttackSpeedSpell);
-                }
-            }
         }
     }
 }
