@@ -129,7 +129,7 @@ namespace Engarde_Synthesis
             globalCopy.Data = value;
         }
 
-        private static void AddKeyword(FormKey keywordForm, IKeyworded<IKeywordGetter> keyworded)
+        private static void AddKeyword(IKeyworded<IKeywordGetter> keyworded, FormKey keywordForm)
         {
             keyworded.Keywords ??= new ExtendedList<IFormLink<IKeywordGetter>>();
             keyworded.Keywords.Add(keywordForm);
@@ -160,7 +160,7 @@ namespace Engarde_Synthesis
             };
             if (_mctKeywords.TryGetValue(critKey, out FormKey keyword))
             {
-                AddKeyword(keyword, weaponCopy);
+                AddKeyword(weaponCopy, keyword);
             }
 
             if (weaponCopy.Data!.Flags.HasFlag(WeaponData.Flag.BoundWeapon))
@@ -168,7 +168,7 @@ namespace Engarde_Synthesis
                 weaponCopy.BasicStats!.Weight = defaultWeight;
                 if (_mctKeywords.TryGetValue("MCT_PenetratesArmorKW", out keyword))
                 {
-                    AddKeyword(keyword, weaponCopy);
+                    AddKeyword(weaponCopy, keyword);
                 }
             }
             else
@@ -178,14 +178,14 @@ namespace Engarde_Synthesis
                     case WeaponArmorPenetration.Weak:
                         if (_mctKeywords.TryGetValue("MCT_WeakAgainstArmored", out keyword))
                         {
-                            AddKeyword(keyword, weaponCopy);
+                            AddKeyword(weaponCopy, keyword);
                         }
 
                         break;
                     case WeaponArmorPenetration.Strong:
                         if (_mctKeywords.TryGetValue("MCT_PenetratesArmorKW", out keyword))
                         {
-                            AddKeyword(keyword, weaponCopy);
+                            AddKeyword(weaponCopy, keyword);
                         }
 
                         break;
@@ -413,11 +413,231 @@ namespace Engarde_Synthesis
                     attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
                     break;
                 case "attackStart_Attack_R1":
-                    ChangeBasicAttackStats(attack, strikeAngle:25, strikeChance:1,damageMult:0.5f, attackAngle:5);
+                    ChangeBasicAttackStats(attack, strikeAngle: 25, strikeChance: 1, damageMult: 0.5f, attackAngle: 5);
                     attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
                     break;
                 case "bashPowerStart":
-                    ChangeBasicAttackStats(attack, strikeAngle:65);
+                    ChangeBasicAttackStats(attack, strikeAngle: 65);
+                    break;
+            }
+        }
+
+        private static void SetWerewolfAttackData(IAttack attack)
+        {
+            if (!IsValidAttack(attack))
+            {
+                return;
+            }
+
+            string attackEvent = attack.AttackEvent!;
+            attack.AttackData!.Knockdown = 0;
+            attack.AttackData.Spell = _mctSpells["MCT_NormalAttackSpell"];
+
+            switch (attackEvent)
+            {
+                case "AttackStartDual":
+                case "AttackStartDualRunning":
+                    attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, false);
+                    attack.AttackData.Flags.SetFlag(AttackData.Flag.BashAttack, true);
+                    ChangeBasicAttackStats(attack, 45);
+                    attack.AttackData.DamageMult = 0.3f;
+                    attack.AttackData.Spell = FormLink<IASpellGetter>.Null;
+                    return;
+                case "AttackStartDualSprinting":
+                case "AttackStartLeftSprinting":
+                case "AttackStartRightSprinting":
+                    attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, false);
+                    ChangeBasicAttackStats(attack, 55);
+                    attack.AttackData.Spell = _mctSpells["MCT_BeastTackleAttackSpell"];
+                    return;
+                case "attackStartLeft":
+                    ChangeBasicAttackStats(attack, strikeAngle: 40, attackAngle: -30);
+                    break;
+                case "attackStartRight":
+                    ChangeBasicAttackStats(attack, strikeAngle: 40, attackAngle: 30);
+                    break;
+                case "AttackStartLeftPower":
+                case "attackStartRightPower":
+                    attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
+                    ChangeBasicAttackStats(attack, strikeAngle: 40);
+                    attack.AttackData.Stagger = 0.1f;
+                    attack.AttackData.Spell = _mctSpells["MCT_BeastBleedAttackSpell"];
+                    break;
+                case "AttackStartLeftRunningPower":
+                case "AttackStartRightRunningPower":
+                    ChangeBasicAttackStats(attack, 30, attackAngle: 0);
+                    attack.AttackData.AttackType = _mctKeywords["MCT_VerticalAttack"];
+                    attack.AttackData.Spell = _mctSpells["MCT_BeastTackleAttackSpell"];
+                    break;
+                case "AttackStartLeftSide":
+                case "AttackStartRightSide":
+                    ChangeBasicAttackStats(attack, 20, 0, -0.5f);
+                    break;
+                case "AttackStartBackHand":
+                    ChangeBasicAttackStats(attack, 90, 0, attackAngle: 0);
+                    attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
+                    attack.AttackData.StaminaMult = 1.0f;
+                    attack.AttackData.AttackType = _mctKeywords["MCT_SweepAttack"];
+                    attack.AttackData.Spell = _mctSpells["MCT_BackPowerAttackSpell"];
+                    break;
+            }
+        }
+
+        private static void SetBearAttackData(IAttack attack)
+        {
+            if (!IsValidAttack(attack))
+            {
+                return;
+            }
+
+            string attackEvent = attack.AttackEvent!;
+
+            switch (attackEvent)
+            {
+                case "attackStart_Attack1":
+                case "attackStart_AttackLeft1":
+                case "attackStart_Attack2":
+                case "attackStart_AttackRight1":
+                    ChangeBasicAttackStats(attack, attackAngle: -45);
+                    break;
+                case "attackStart_StandingPower":
+                    ChangeBasicAttackStats(attack, strikeAngle: 65, damageMult: 1);
+                    break;
+                default:
+                    if (attackEvent.Contains("ForwardPower"))
+                    {
+                        ChangeBasicAttackStats(attack, strikeAngle: 58);
+                    }
+
+                    break;
+            }
+        }
+
+        private static void SetDwarvenSphereAttackData(IAttack attack)
+        {
+            if (!IsValidAttack(attack)) 
+            {
+                return;
+            }
+
+            string attackEvent = attack.AttackEvent!;
+		
+            
+            if (attackEvent.Contains("Chop"))
+            {
+                ChangeBasicAttackStats(attack, 28, attackAngle: 15);
+            }
+            else if (attackEvent.Contains("Stab"))
+            {
+                ChangeBasicAttackStats(attack, 20, damageMult: 0.5f);
+            }
+        }
+
+        private static void SetDwarvenCenturionAttackData(IAttack attack)
+        {
+            if (!IsValidAttack(attack)) {
+				return;
+			}
+            
+			string attackEvent = attack.AttackEvent!;
+			
+			if (_settings.Value.staggerSettings.weaponStagger)
+            {
+                attack.AttackData!.Stagger = 0;
+            }
+            
+			switch (attackEvent)
+            {
+                case "attackStartBack":
+                case "attackStartRight":
+                    ChangeBasicAttackStats(attack, 70, attackAngle:150);
+                    attack.AttackData!.AttackType = FormLink<IKeywordGetter>.Null;
+                    break;
+                case "attackStartLeft":
+                    ChangeBasicAttackStats(attack, 70, attackAngle:-150);
+                    attack.AttackData!.AttackType = FormLink<IKeywordGetter>.Null;
+                    break;
+                case "attackStartForwardPowerLeft":
+                case "attackStartForwardPowerRushLeft":
+                    ChangeBasicAttackStats(attack, 60, attackAngle:-10);
+                    attack.AttackData!.AttackType = FormLink<IKeywordGetter>.Null;
+                    break;
+                case "attackStartForwardPowerRight":
+                    ChangeBasicAttackStats(attack, 60, attackAngle:10);
+                    attack.AttackData!.AttackType = FormLink<IKeywordGetter>.Null;
+                    attack.AttackData.DamageMult = 2;
+                    break;
+                case "attackStartSlash":
+                    ChangeBasicAttackStats(attack, 70, attackAngle:-20);
+                    attack.AttackData!.AttackType = FormLink<IKeywordGetter>.Null;
+                    attack.AttackData.DamageMult = 0.75f;
+                    break;
+                case "bashStart":
+                    ChangeBasicAttackStats(attack, 70, attackAngle:20);
+                    attack.AttackData!.AttackType = FormLink<IKeywordGetter>.Null;
+                    attack.AttackData.DamageMult = 0.5f;
+                    break;
+                case "attackStartStab":
+                case "attackStartChop":
+                    ChangeBasicAttackStats(attack, 25, attackAngle:20);
+                    attack.AttackData!.AttackType = _mctKeywords["MCT_VerticalAttack"];
+                    attack.AttackData.DamageMult = 1.25f;
+                    break;
+            }
+        }
+        
+        private static void SetDragonAttackData(IAttack attack)
+        {
+            if (!IsValidAttack(attack)) {
+				return;
+			}
+			string attackEvent = attack.AttackEvent!;
+            
+			switch (attackEvent)
+            {
+                case "attackStartBite":
+                    ChangeBasicAttackStats(attack, 20);
+                    attack.AttackData!.Spell = _mctSpells["MCT_DragonBiteAttackSpell"];
+                    break;
+                case "attackStartBiteLeft":
+                    ChangeBasicAttackStats(attack, 20, attackAngle: -40);
+                    attack.AttackData!.Spell = _mctSpells["MCT_DragonBiteAttackSpell"];
+                    break;
+                case "attackStartBiteRight":
+                    ChangeBasicAttackStats(attack, 20, attackAngle: 40);
+                    attack.AttackData!.Spell = _mctSpells["MCT_DragonBiteAttackSpell"];
+                    break;
+                case "attackStartTail":
+                    ChangeBasicAttackStats(attack, 15, 2);
+                    attack.AttackData!.DamageMult = 0;
+                    attack.AttackData.Spell = FormLink<IASpellGetter>.Null;
+                    attack.AttackData.AttackType = _mctKeywords["MCT_DragonTailAttack"];
+                    break;
+                case "attackStartTailLeft":
+                    ChangeBasicAttackStats(attack, 40, attackAngle: 110);
+                    attack.AttackData!.DamageMult = 0;
+                    attack.AttackData.Spell = FormLink<IASpellGetter>.Null;
+                    attack.AttackData.AttackType = _mctKeywords["MCT_DragonTailAttackLeft"];
+                    attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
+                    break;
+                case "attackStartTailRight":
+                    ChangeBasicAttackStats(attack, 40, attackAngle: -110);
+                    attack.AttackData!.DamageMult = 0;
+                    attack.AttackData.Spell = FormLink<IASpellGetter>.Null;
+                    attack.AttackData.AttackType = _mctKeywords["MCT_DragonTailAttackRight"];
+                    attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
+                    break;
+                case "attackStartWingLeft":
+                    ChangeBasicAttackStats(attack, 20, attackAngle: -80);
+                    attack.AttackData!.DamageMult = 0.5f;
+                    attack.AttackData.Spell = _mctSpells["MCT_PowerAttackSpell"];
+                    attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
+                    break;
+                case "attackStartWingRight":
+                    ChangeBasicAttackStats(attack, 20, attackAngle: 80);
+                    attack.AttackData!.DamageMult = 0.5f;
+                    attack.AttackData.Spell = _mctSpells["MCT_PowerAttackSpell"];
+                    attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
                     break;
             }
         }
@@ -558,7 +778,7 @@ namespace Engarde_Synthesis
                             weaponCopy.BasicStats.Weight = 2;
                             if (_mctKeywords.TryGetValue("MCT_PenetratesArmorKW", out var keyword))
                             {
-                                AddKeyword(keyword, weaponCopy);
+                                AddKeyword(weaponCopy, keyword);
                             }
                         }
 
@@ -567,7 +787,7 @@ namespace Engarde_Synthesis
                             weaponCopy.BasicStats.Weight = 4;
                             if (_mctKeywords.TryGetValue("MCT_WeakAgainstArmored", out var keyword))
                             {
-                                AddKeyword(keyword, weaponCopy);
+                                AddKeyword(weaponCopy, keyword);
                             }
                         }
 
@@ -620,7 +840,14 @@ namespace Engarde_Synthesis
         {
             foreach (IRaceGetter race in state.LoadOrder.PriorityOrder.WinningOverrides<IRaceGetter>())
             {
+                if (race.EditorID == null)
+                {
+                    continue;
+                }
+
                 Race raceCopy = state.PatchMod.Races.GetOrAddAsOverride(race);
+                bool growlEnabled =
+                    state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp"));
                 string behavior = raceCopy.BehaviorGraph.Male?.File ?? raceCopy.BehaviorGraph.Female?.File ?? "";
                 raceCopy.AngularAccelerationRate = _settings.Value.npcSettings.angularAccelerationMult * 0.25f;
                 raceCopy.UnarmedReach = _settings.Value.npcSettings.unarmedReachMult * 96;
@@ -646,22 +873,21 @@ namespace Engarde_Synthesis
 
                 if (raceCopy.HasKeyword("ActorTypeNPC", state.LinkCache))
                 {
-                    raceCopy.Keywords!.Add(_mctKeywords["MCT_StaggerResist1"]);
-                    raceCopy.Keywords.Add(_mctKeywords["MCT_InjuryAttackSpeed"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_InjuryAttackSpeed"]);
                     raceCopy.ActorEffect ??= new ExtendedList<IFormLink<IASpellGetter>>();
                     raceCopy.ActorEffect.Add(_mctSpells["MCT_DefaultRaceSpell"]);
                 }
 
                 if (raceCopy.HasKeyword("ActorTypeUndead", state.LinkCache))
                 {
-                    raceCopy.Keywords!.Add(_mctKeywords["MCT_CritImmune"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_CritImmune"]);
                 }
 
                 if (behavior == "Actors\\AtronachFrost\\AtronachFrostProject.hkx")
                 {
                     raceCopy.ActorEffect.Remove(_mctSpells["MCT_DefaultRaceSpell"]);
-                    raceCopy.Keywords ??= new ExtendedList<IFormLink<IKeywordGetter>>();
-                    raceCopy.Keywords.Add(_mctKeywords["MCT_ArmoredKW"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_ArmoredKW"]);
                     if (_settings.Value.npcSettings.addArmorToArmored)
                     {
                         raceCopy.ActorEffect.Add(_mctKeywords["MCT_BonusArmor500"]);
@@ -670,10 +896,278 @@ namespace Engarde_Synthesis
                     raceCopy.AngularAccelerationRate = 0.75f * _settings.Value.npcSettings.angularAccelerationMult;
                     raceCopy.UnarmedReach = 196 * _settings.Value.npcSettings.unarmedReachMult;
                     raceCopy.Attacks.ForEach(SetAtronachFrostAttackData);
+                    if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dwarfsphere.esp")) &&
+                        (raceCopy.EditorID?.StartsWith("DwaSp") ?? false) &&
+                        (raceCopy.EditorID?.Contains("Cleaner") ?? false))
+                    {
+                        //helpers.logMessage('patching project AHO prowler: ' + editorID);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist4"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower3"]);
+                        raceCopy.BaseMass = 8;
+                        raceCopy.UnarmedDamage = 50 * _settings.Value.npcSettings.unarmedDamageMult;
+                    }
+                    else
+                    {
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist3"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower3"]);
+                        raceCopy.BaseMass = 6;
+                        raceCopy.UnarmedDamage = 50 * _settings.Value.npcSettings.unarmedDamageMult;
+                    }
+                }
+
+                else if (behavior == "Actors\\WerewolfBeast\\WerewolfBeastProject.hkx" &&
+                         _settings.Value.npcSettings.werewolfTweaks)
+                {
+                    AddKeyword(raceCopy, _mctKeywords["MCT_WerewolfRaceKW"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_WeakAgainstArmored"]);
+
+                    if (raceCopy.EditorID?.Contains("Werebear") ?? false)
+                    {
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower2"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist4"]);
+                        raceCopy.BaseMass = 6;
+                        raceCopy.UnarmedDamage = 25 * _settings.Value.npcSettings.unarmedDamageMult;
+                        if (growlEnabled)
+                        {
+                            raceCopy.UnarmedDamage = 10;
+                        }
+
+                        raceCopy.Starting[BasicStat.Health] = 1000;
+                        raceCopy.Starting[BasicStat.Stamina] = 450;
+                    }
+                    else if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Enderal - Forgotten Stories.esm"))
+                    )
+                    {
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower1"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
+                        raceCopy.BaseMass = 1.4f;
+                        raceCopy.UnarmedDamage = 8 * _settings.Value.npcSettings.unarmedDamageMult;
+                    }
+                    else
+                    {
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower1"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist3"]);
+                        raceCopy.BaseMass = 3;
+                        raceCopy.UnarmedDamage = 15 * _settings.Value.npcSettings.unarmedDamageMult;
+                        if (growlEnabled)
+                        {
+                            raceCopy.UnarmedDamage = 10;
+                        }
+
+                        raceCopy.Starting[BasicStat.Health] = 300;
+                        raceCopy.Starting[BasicStat.Stamina] = 200;
+                    }
+
+                    raceCopy.UnarmedReach = 145;
+                    if (_settings.Value.npcSettings.addArmorToArmored)
+                    {
+                        raceCopy.ActorEffect.Add(_mctKeywords["MCT_BonusArmor250"]);
+                    }
+
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaminaControlledKW"]);
+                    raceCopy.Regen[BasicStat.Stamina] = 1;
+                    raceCopy.Attacks.ForEach(SetWerewolfAttackData);
+                }
+
+                else if (raceCopy.EditorID!.Contains("Atronach"))
+                {
+                    AddKeyword(raceCopy, _mctKeywords["critImmuneKW"]);
+                    raceCopy.BaseMass = 2;
+
+                    if (raceCopy.EditorID.Contains("Flame"))
+                    {
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower1"]);
+
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 100 * _settings.Value.npcSettings.unarmedReachMult;
+                    }
+
+                    if (raceCopy.EditorID.Contains("Storm"))
+                    {
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist2"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower2"]);
+
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 200 * _settings.Value.npcSettings.unarmedReachMult;
+                    }
+                }
+
+                else if (raceCopy.EditorID.Contains("Bear") && raceCopy.EditorID.Contains("Race"))
+                {
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist2"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower2"]);
+                    AddKeyword(raceCopy, _mctKeywords["paddedKW"]);
+                    AddKeyword(raceCopy, _mctKeywords["injuryBleedKW"]);
+                    raceCopy.BaseMass = 3.5f;
+
+                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                    raceCopy.UnarmedReach = 124 * _settings.Value.npcSettings.unarmedReachMult;
+
+                    raceCopy.UnarmedDamage *= 1.5f;
+                    raceCopy.UnarmedReach *= 0.8f;
+
+                    raceCopy.Attacks.ForEach(SetBearAttackData);
+
+                    return;
+                }
+
+                else if (raceCopy.EditorID.Contains("BoarRace"))
+                {
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist2"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower2"]);
+
+                    raceCopy.Attacks.ForEach(
+                        attack => attack.AttackData!.AttackType = _mctKeywords["MCT_VerticalAttack"]);
+                }
+                else if (raceCopy.EditorID.Contains("CowRace"))
+                {
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower1"]);
+                }
+                else if (raceCopy.EditorID.Contains("Chaurus") ||
+                         raceCopy.EditorID.Contains("Siligonder"))
+                {
+                    if (_settings.Value.npcSettings.addArmorToArmored)
+                    {
+                        raceCopy.ActorEffect.Add(_mctSpells["MCT_BonusArmor250"]);
+                    }
+
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist2"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower2"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_ArmoredKW"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_WeakAgainstArmored"]);
+                    AddKeyword(raceCopy, _mctKeywords["injuryKnockDownKW"]);
+                    raceCopy.BaseMass = 2.5f;
+
+                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                    raceCopy.UnarmedReach = 96 * _settings.Value.npcSettings.unarmedReachMult;
+                }
+                else if (raceCopy.EditorID.Contains("DeerRace") || raceCopy.EditorID.Contains("ElkRace"))
+                {
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower1"]);
+
+                    raceCopy.AngularAccelerationRate = 1;
+                    raceCopy.UnarmedReach = 96 * _settings.Value.npcSettings.unarmedReachMult;
+                }
+                else if (raceCopy.EditorID.StartsWith("DwaSp"))
+                {
+                    AddKeyword(raceCopy, _mctKeywords["MCT_ArmoredKW"]);
+                    AddKeyword(raceCopy, _mctKeywords["critImmuneKW"]);
+
+                    if (raceCopy.EditorID.Contains("JumperRace"))
+                    {
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower1"]);
+
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 92 * _settings.Value.npcSettings.unarmedReachMult;
+                    }
+                }
+                else if (raceCopy.EditorID.Contains("Dwarven"))
+                {
+                    AddKeyword(raceCopy, _mctKeywords["MCT_ArmoredKW"]);
+                    AddKeyword(raceCopy, _mctKeywords["critImmuneKW"]);
+                    
+                    if (raceCopy.EditorID.Contains("Spider"))
+                    {
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist0"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower0"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_WeakAgainstArmored"]);
+                        raceCopy.BaseMass = 1;
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 92 * _settings.Value.npcSettings.unarmedReachMult;
+                    }
+
+                    else if (raceCopy.EditorID.Contains("Sphere") || raceCopy.EditorID.Contains("DLC2DwarvenBallistaRace"))
+                    {
+                        if (_settings.Value.npcSettings.addArmorToArmored)
+                        {
+                            raceCopy.ActorEffect.Add(_mctSpells["MCT_BonusArmor250"]);
+                        }
+                        
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower1"]);
+                        AddKeyword(raceCopy, _mctKeywords["injuryStunKW"]);
+                        raceCopy.BaseMass = 2.5f;
+                        
+                        raceCopy.AngularAccelerationRate = 0.12f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 128 * _settings.Value.npcSettings.unarmedReachMult;
+                        raceCopy.Attacks.ForEach(SetDwarvenSphereAttackData);
+                    }
+
+                    // Centurion
+                    if (raceCopy.EditorID.Contains("Centurion"))
+                    {
+                        raceCopy.ActorEffect.Remove(_mctSpells["MCT_DefaultRaceSpell"]);
+                        if (_settings.Value.npcSettings.addArmorToArmored)
+                        {
+                            raceCopy.ActorEffect.Add(_mctSpells["MCT_BonusArmor500"]);
+                        }
+                        
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist4"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower3"]);
+                        raceCopy.BaseMass = 8;
+                        
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 250 * _settings.Value.npcSettings.unarmedReachMult;
+                        
+                        raceCopy.Attacks.ForEach(SetDwarvenCenturionAttackData);
+                    }
+                    else if (raceCopy.EditorID.Contains("Dog") && raceCopy.EditorID.Contains("Race")) {
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist0"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower0"]);
+
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 64;
+                    }
+                    
+			        else if ((raceCopy.EditorID.Contains("Dragon") || raceCopy.EditorID == "AlduinRace") &&
+                             !raceCopy.EditorID.Contains("Priest") && _settings.Value.npcSettings.dragonTweaks) 
+                    {
+                        AddKeyword(raceCopy, _mctKeywords["MCT_DragonRaceKW"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_ArmoredKW"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower4"]);
+                        
+                        raceCopy.AngularAccelerationRate = 10;
+                        raceCopy.Starting[BasicStat.Health] = 1500;
+                        raceCopy.Starting[BasicStat.Stamina] = 350;
+
+                        raceCopy.ActorEffect.Remove(_mctSpells["MCT_DefaultRaceSpell"]);
+                        
+                        if (_settings.Value.npcSettings.addArmorToArmored) 
+                        {
+                            raceCopy.ActorEffect.Add(_mctSpells["MCT_BonusArmor500"]);
+                        }
+                        
+                        raceCopy.ActorEffect.Add(_mctSpells["MCT_StaminaDrainWhileFlying"]);
+                        raceCopy.UnarmedReach = 180;
+                        raceCopy.Regen[BasicStat.Health] = 0;
+                        raceCopy.Regen[BasicStat.Stamina] = 1;
+                        
+                        AddKeyword(raceCopy, _mctKeywords["critImmuneKW"]);
+                        raceCopy.BaseMass = 10;
+
+                        if (raceCopy.EditorID == "AlduinRace") {
+                            raceCopy.ActorEffect.Add(_mctSpells["MCT_DragonAlduinRaceSpell"]);
+                            raceCopy.UnarmedDamage = 150;
+                        }
+				        else {
+                            raceCopy.ActorEffect.Add(_mctSpells["MCT_DragonRaceSpell"]);
+                            raceCopy.UnarmedDamage = 100;
+                        }
+                        
+                        raceCopy.Attacks.ForEach(SetDragonAttackData);
+				        
+				        return;
+			        }
+
+                    return;
                 }
             }
         }
-
+        
         #endregion
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
