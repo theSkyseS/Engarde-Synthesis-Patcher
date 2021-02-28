@@ -1097,7 +1097,7 @@ namespace Engarde_Synthesis
                         raceCopy.Attacks.ForEach(SetDwarvenSphereAttackData);
                     }
 
-                    // Centurion
+                    
                     if (raceCopy.EditorID.Contains("Centurion"))
                     {
                         raceCopy.ActorEffect.Remove(_mctSpells["MCT_DefaultRaceSpell"]);
@@ -1115,56 +1115,53 @@ namespace Engarde_Synthesis
                         
                         raceCopy.Attacks.ForEach(SetDwarvenCenturionAttackData);
                     }
-                    else if (raceCopy.EditorID.Contains("Dog") && raceCopy.EditorID.Contains("Race")) {
+                }
+                else if (raceCopy.EditorID.Contains("Dog") && raceCopy.EditorID.Contains("Race")) {
                         AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist0"]);
                         AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower0"]);
 
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 64;
+                }
+                    
+                else if ((raceCopy.EditorID.Contains("Dragon") || raceCopy.EditorID == "AlduinRace") &&
+                             !raceCopy.EditorID.Contains("Priest") && _settings.Value.npcSettings.dragonTweaks) 
+                {
+                    AddKeyword(raceCopy, _mctKeywords["MCT_DragonRaceKW"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_ArmoredKW"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower4"]);
+                    
+                    raceCopy.AngularAccelerationRate = 10;
+                    raceCopy.Starting[BasicStat.Health] = 1500;
+                    raceCopy.Starting[BasicStat.Stamina] = 350;
+
+                    raceCopy.ActorEffect.Remove(_mctSpells["MCT_DefaultRaceSpell"]);
+                    
+                    if (_settings.Value.npcSettings.addArmorToArmored) 
+                    {
+                        raceCopy.ActorEffect.Add(_mctSpells["MCT_BonusArmor500"]);
                     }
                     
-			        else if ((raceCopy.EditorID.Contains("Dragon") || raceCopy.EditorID == "AlduinRace") &&
-                             !raceCopy.EditorID.Contains("Priest") && _settings.Value.npcSettings.dragonTweaks) 
-                    {
-                        AddKeyword(raceCopy, _mctKeywords["MCT_DragonRaceKW"]);
-                        AddKeyword(raceCopy, _mctKeywords["MCT_ArmoredKW"]);
-                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower4"]);
-                        
-                        raceCopy.AngularAccelerationRate = 10;
-                        raceCopy.Starting[BasicStat.Health] = 1500;
-                        raceCopy.Starting[BasicStat.Stamina] = 350;
+                    raceCopy.ActorEffect.Add(_mctSpells["MCT_StaminaDrainWhileFlying"]);
+                    raceCopy.UnarmedReach = 180;
+                    raceCopy.Regen[BasicStat.Health] = 0;
+                    raceCopy.Regen[BasicStat.Stamina] = 1;
+                    
+                    AddKeyword(raceCopy, _mctKeywords["critImmuneKW"]);
+                    raceCopy.BaseMass = 10;
 
-                        raceCopy.ActorEffect.Remove(_mctSpells["MCT_DefaultRaceSpell"]);
-                        
-                        if (_settings.Value.npcSettings.addArmorToArmored) 
-                        {
-                            raceCopy.ActorEffect.Add(_mctSpells["MCT_BonusArmor500"]);
-                        }
-                        
-                        raceCopy.ActorEffect.Add(_mctSpells["MCT_StaminaDrainWhileFlying"]);
-                        raceCopy.UnarmedReach = 180;
-                        raceCopy.Regen[BasicStat.Health] = 0;
-                        raceCopy.Regen[BasicStat.Stamina] = 1;
-                        
-                        AddKeyword(raceCopy, _mctKeywords["critImmuneKW"]);
-                        raceCopy.BaseMass = 10;
-
-                        if (raceCopy.EditorID == "AlduinRace") {
-                            raceCopy.ActorEffect.Add(_mctSpells["MCT_DragonAlduinRaceSpell"]);
-                            raceCopy.UnarmedDamage = 150;
-                        }
-				        else {
-                            raceCopy.ActorEffect.Add(_mctSpells["MCT_DragonRaceSpell"]);
-                            raceCopy.UnarmedDamage = 100;
-                        }
-                        
-                        raceCopy.Attacks.ForEach(SetDragonAttackData);
-				        
-				        return;
-			        }
-
-                    return;
-                }
+                    if (raceCopy.EditorID == "AlduinRace") {
+                        raceCopy.ActorEffect.Add(_mctSpells["MCT_DragonAlduinRaceSpell"]);
+                        raceCopy.UnarmedDamage = 150;
+                    }
+				    else {
+                        raceCopy.ActorEffect.Add(_mctSpells["MCT_DragonRaceSpell"]);
+                        raceCopy.UnarmedDamage = 100;
+                    }
+                    
+                    raceCopy.Attacks.ForEach(SetDragonAttackData);
+                    
+			    }
             }
         }
         
