@@ -15,5 +15,7 @@ First, you need to install Engarde main files as usual, but instead of running z
   2. Launch Synthesis through your mod manager;
   3. In the top left corner select "Git repository"
   4. Find this patcher in the list and add it;
-  5. Open settings tab and tweak them as you wish;
-  6. When you ready, launch patchers by using button in the bottom left corner.
+  5. Open settings tab, it should look like this:<br>
+![image](https://user-images.githubusercontent.com/62331215/109416842-ccc98880-79ea-11eb-82d6-0d79228eae50.png)
+  7. Customize your settings;
+  8. When you ready, launch patchers by using button in the bottom left corner.
