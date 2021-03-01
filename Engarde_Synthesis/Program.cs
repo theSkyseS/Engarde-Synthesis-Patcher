@@ -155,7 +155,10 @@ namespace Engarde_Synthesis
                 WeaponCritChance.High => "MCT_CanCritHigh",
                 _ => "None"
             };
-            AddKeyword(weaponCopy, _mctKeywords[critKey]);
+            if (_mctKeywords.TryGetValue(critKey, out FormKey keyword))
+            {
+                AddKeyword(weaponCopy, keyword);
+            }
 
             if (weaponCopy.Data!.Flags.HasFlag(WeaponData.Flag.BoundWeapon))
             {
