@@ -5,12 +5,9 @@ using Mutagen.Bethesda;
 using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.Skyrim;
 using System.Threading.Tasks;
-using Engarde_Synthesis.Settings;
 using Noggog;
 
 
-//TODO: delete this
-#pragma warning disable CA1416
 namespace Engarde_Synthesis
 {
     public class Program
@@ -1007,7 +1004,7 @@ namespace Engarde_Synthesis
                     AddKeyword(raceCopy, _mctKeywords["MCT_ArmoredKW"]);
                     if (_settings.Value.npcSettings.addArmorToArmored)
                     {
-                        raceCopy.ActorEffect.Add(_mctKeywords["MCT_BonusArmor500"]);
+                        raceCopy.ActorEffect.Add(_mctSpells["MCT_BonusArmor500"]);
                     }
 
                     raceCopy.AngularAccelerationRate = 0.75f * _settings.Value.npcSettings.angularAccelerationMult;
@@ -1077,7 +1074,7 @@ namespace Engarde_Synthesis
                     raceCopy.UnarmedReach = 145;
                     if (_settings.Value.npcSettings.addArmorToArmored)
                     {
-                        raceCopy.ActorEffect.Add(_mctKeywords["MCT_BonusArmor250"]);
+                        raceCopy.ActorEffect.Add(_mctSpells["MCT_BonusArmor250"]);
                     }
 
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaminaControlledKW"]);
