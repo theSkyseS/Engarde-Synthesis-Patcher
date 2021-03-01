@@ -198,14 +198,6 @@ namespace Engarde_Synthesis
                                                               critMult);
         }
 
-        private static ISpellGetter GetSpellFromId(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, uint id)
-        {
-            var spellForm = Engarde.MakeFormKey(id);
-            if (!state.LinkCache.TryResolve<ISpellGetter>(spellForm, out ISpellGetter? spellGetter))
-                throw new Exception($"Unable to find required spell: {spellForm}");
-            return spellGetter;
-        }
-
         private static bool IsValidAttack(IAttackGetter attack)
         {
             return attack.AttackData?.Stagger != null && !attack.AttackEvent.IsNullOrEmpty();
@@ -282,7 +274,7 @@ namespace Engarde_Synthesis
                 }
                 else if (_settings.Value.staggerSettings.weaponStagger)
                 {
-                    if (_mctSpells.TryGetValue("MCT_PowerAttackSpell", out FormKey spellKey))
+                    if (_mctSpells.TryGetValue("MCT_NormalAttackSpell", out FormKey spellKey))
                     {
                         attack.AttackData.Spell = spellKey;
                     }
@@ -316,7 +308,7 @@ namespace Engarde_Synthesis
                     break;
                 case "attackPowerStartBackward":
                     ChangeBasicAttackStats(attack, 65, 0);
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
+                    attack.AttackData.Flags |= AttackData.Flag.RotatingAttack;
                     break;
                 case "attackPowerStartDualWield":
                 {
@@ -360,7 +352,7 @@ namespace Engarde_Synthesis
                     if (attackEvent.Contains("PowerStartLeft") || attackEvent.Contains("PowerStartRight"))
                     {
                         ChangeBasicAttackStats(attack, 65, 0, -1);
-                        attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
+                        attack.AttackData.Flags |= AttackData.Flag.RotatingAttack;
                     }
 
                     else if (attackEvent.Contains("Chop"))
@@ -399,7 +391,7 @@ namespace Engarde_Synthesis
             switch (attackEvent)
             {
                 case "attackPowerStart_ForwardPowerAttack_R1":
-                    ChangeBasicAttackStats(attack, strikeAngle: 5);
+                    ChangeBasicAttackStats(attack, strikeChance: 5);
                     attack.AttackData.AttackType = FormLink<IKeywordGetter>.Null;
                     break;
                 case "attackPowerStart_PowerAttack_L1":
@@ -407,11 +399,11 @@ namespace Engarde_Synthesis
                     break;
                 case "attackStart_Attack_L1":
                     ChangeBasicAttackStats(attack, strikeChance: 1, attackAngle: -25, damageMult: 0.5f);
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
+                    attack.AttackData.Flags |= AttackData.Flag.PowerAttack;
                     break;
                 case "attackStart_Attack_R1":
                     ChangeBasicAttackStats(attack, strikeAngle: 25, strikeChance: 1, damageMult: 0.5f, attackAngle: 5);
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
+                    attack.AttackData.Flags |= AttackData.Flag.PowerAttack;
                     break;
                 case "bashPowerStart":
                     ChangeBasicAttackStats(attack, strikeAngle: 65);
@@ -434,8 +426,7 @@ namespace Engarde_Synthesis
             {
                 case "AttackStartDual":
                 case "AttackStartDualRunning":
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, false);
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.BashAttack, true);
+                    attack.AttackData.Flags = AttackData.Flag.BashAttack;
                     ChangeBasicAttackStats(attack, 45);
                     attack.AttackData.DamageMult = 0.3f;
                     attack.AttackData.Spell = FormLink<IASpellGetter>.Null;
@@ -443,7 +434,7 @@ namespace Engarde_Synthesis
                 case "AttackStartDualSprinting":
                 case "AttackStartLeftSprinting":
                 case "AttackStartRightSprinting":
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, false);
+                    attack.AttackData.Flags = 0;
                     ChangeBasicAttackStats(attack, 55);
                     attack.AttackData.Spell = _mctSpells["MCT_BeastTackleAttackSpell"];
                     return;
@@ -455,7 +446,7 @@ namespace Engarde_Synthesis
                     break;
                 case "AttackStartLeftPower":
                 case "attackStartRightPower":
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
+                    attack.AttackData.Flags |= AttackData.Flag.PowerAttack;
                     ChangeBasicAttackStats(attack, strikeAngle: 40);
                     attack.AttackData.Stagger = 0.1f;
                     attack.AttackData.Spell = _mctSpells["MCT_BeastBleedAttackSpell"];
@@ -472,7 +463,7 @@ namespace Engarde_Synthesis
                     break;
                 case "AttackStartBackHand":
                     ChangeBasicAttackStats(attack, 90, 0, attackAngle: 0);
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
+                    attack.AttackData.Flags |= AttackData.Flag.RotatingAttack;
                     attack.AttackData.StaminaMult = 1.0f;
                     attack.AttackData.AttackType = _mctKeywords["MCT_SweepAttack"];
                     attack.AttackData.Spell = _mctSpells["MCT_BackPowerAttackSpell"];
@@ -493,9 +484,11 @@ namespace Engarde_Synthesis
             {
                 case "attackStart_Attack1":
                 case "attackStart_AttackLeft1":
+                    ChangeBasicAttackStats(attack, attackAngle: -45);
+                    break;
                 case "attackStart_Attack2":
                 case "attackStart_AttackRight1":
-                    ChangeBasicAttackStats(attack, attackAngle: -45);
+                    ChangeBasicAttackStats(attack, attackAngle: 45);
                     break;
                 case "attackStart_StandingPower":
                     ChangeBasicAttackStats(attack, strikeAngle: 65, damageMult: 1);
@@ -618,26 +611,26 @@ namespace Engarde_Synthesis
                     attack.AttackData!.DamageMult = 0;
                     attack.AttackData.Spell = FormLink<IASpellGetter>.Null;
                     attack.AttackData.AttackType = _mctKeywords["MCT_DragonTailAttackLeft"];
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
+                    attack.AttackData.Flags |= AttackData.Flag.RotatingAttack;
                     break;
                 case "attackStartTailRight":
                     ChangeBasicAttackStats(attack, 40, attackAngle: -110);
                     attack.AttackData!.DamageMult = 0;
                     attack.AttackData.Spell = FormLink<IASpellGetter>.Null;
                     attack.AttackData.AttackType = _mctKeywords["MCT_DragonTailAttackRight"];
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
+                    attack.AttackData.Flags |= AttackData.Flag.RotatingAttack;
                     break;
                 case "attackStartWingLeft":
                     ChangeBasicAttackStats(attack, 20, attackAngle: -80);
                     attack.AttackData!.DamageMult = 0.5f;
                     attack.AttackData.Spell = _mctSpells["MCT_PowerAttackSpell"];
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
+                    attack.AttackData.Flags |= AttackData.Flag.RotatingAttack;
                     break;
                 case "attackStartWingRight":
                     ChangeBasicAttackStats(attack, 20, attackAngle: 80);
                     attack.AttackData!.DamageMult = 0.5f;
                     attack.AttackData.Spell = _mctSpells["MCT_PowerAttackSpell"];
-                    attack.AttackData.Flags.SetFlag(AttackData.Flag.RotatingAttack, true);
+                    attack.AttackData.Flags |= AttackData.Flag.RotatingAttack;
                     break;
             }
         }
@@ -679,7 +672,7 @@ namespace Engarde_Synthesis
 
             if (attackEvent == "AttackStart_ComboChop")
             {
-                ChangeBasicAttackStats(attack, attackAngle: 20);
+                ChangeBasicAttackStats(attack, 20);
             }
 
             if (attackEvent.Contains("Bite"))
@@ -712,7 +705,7 @@ namespace Engarde_Synthesis
                     ChangeBasicAttackStats(attack, 50, attackAngle: 35);
                     if (isGiant)
                     {
-                        attack.AttackData!.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
+                        attack.AttackData!.Flags |= AttackData.Flag.PowerAttack;
                         attack.AttackData.Spell = _mctSpells["MCT_PowerAttackSpell"];
                     }
 
@@ -723,7 +716,7 @@ namespace Engarde_Synthesis
                     ChangeBasicAttackStats(attack, 50, attackAngle: -35);
                     if (isGiant)
                     {
-                        attack.AttackData!.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
+                        attack.AttackData!.Flags |= AttackData.Flag.PowerAttack;
                         attack.AttackData.Spell = _mctSpells["MCT_PowerAttackSpell"];
                     }
 
@@ -752,7 +745,7 @@ namespace Engarde_Synthesis
             }
             
             else if (attackEvent.Contains("attackStartPower")) {
-                ChangeBasicAttackStats(attack, attackAngle:45);
+                ChangeBasicAttackStats(attack, 45);
             }
         }
 
@@ -952,13 +945,12 @@ namespace Engarde_Synthesis
 
         private static void PatchRaces(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (IRaceGetter race in state.LoadOrder.PriorityOrder.WinningOverrides<IRaceGetter>())
+            foreach (var race in state.LoadOrder.PriorityOrder.WinningOverrides<IRaceGetter>())
             {
                 if (race.EditorID == null)
                 {
                     continue;
                 }
-
                 Race raceCopy = state.PatchMod.Races.GetOrAddAsOverride(race);
                 bool growlEnabled =
                     state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp"));
@@ -990,7 +982,7 @@ namespace Engarde_Synthesis
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
                     AddKeyword(raceCopy, _mctKeywords["MCT_InjuryAttackSpeed"]);
                     raceCopy.ActorEffect ??= new ExtendedList<IFormLink<IASpellGetter>>();
-                    raceCopy.ActorEffect.Add(_mctSpells["MCT_DefaultRaceSpell"]);
+                    raceCopy.ActorEffect.Add(_mctSpells["MCT_NPCRaceSpell"]);
                 }
 
                 if (raceCopy.HasKeyword("ActorTypeUndead", state.LinkCache))
@@ -1119,8 +1111,7 @@ namespace Engarde_Synthesis
                     raceCopy.UnarmedReach *= 0.8f;
 
                     raceCopy.Attacks.ForEach(SetBearAttackData);
-
-                    return;
+                    
                 }
                 else if (raceCopy.EditorID.Contains("BoarRace"))
                 {
@@ -1380,8 +1371,7 @@ namespace Engarde_Synthesis
                     raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                     raceCopy.UnarmedReach = 64;
                 }
-                else if (raceCopy.EditorID.Contains("Horker"))
-                {
+                else if (raceCopy.EditorID.Contains("HorseRace")) {
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist2"]);
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower2"]);
 
@@ -1476,8 +1466,6 @@ namespace Engarde_Synthesis
                         if (!IsValidAttack(x)) return;
                         x.AttackData!.AttackType = _mctKeywords["MCT_VerticalAttack"];
                     });
-
-                    return;
                 }
                 else if (raceCopy.EditorID.Contains("SabreCat") || raceCopy.EditorID.Contains("MountainLionRace"))
                 {
@@ -1504,7 +1492,7 @@ namespace Engarde_Synthesis
                         raceCopy.ActorEffect.Add(_mctSpells["MCT_BonusArmor250"]);
                     }
 
-                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist2"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
                     AddKeyword(raceCopy, _mctKeywords["MCT_ArmoredKW"]);
                     raceCopy.BaseMass = 1.5f;
                     
@@ -1571,7 +1559,6 @@ namespace Engarde_Synthesis
                     raceCopy.AngularAccelerationRate = 0.3f * _settings.Value.npcSettings.angularAccelerationMult;
                     raceCopy.UnarmedReach = 64;
 
-                    // all Wolf attacks are low enough to be considered vertical attacks
                     raceCopy.Attacks.ForEach(x =>
                     {
                         if (!IsValidAttack(x)) return;
