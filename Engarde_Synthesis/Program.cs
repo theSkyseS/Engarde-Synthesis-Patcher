@@ -769,7 +769,9 @@ namespace Engarde_Synthesis
             ChangeGlobalShortValue(state, globals["MCT_PowerAttackCoolDownTime"],
                 _settings.Value.powerAttacks.powerAttackCooldown);
             ChangeGlobalShortValue(state, globals["MCT_CGOIntegrationEnabled"], state.LoadOrder.TryGetIfEnabled(
-                ModKey.FromNameAndExtension("DSerCombatGameplayOverhaul.esp"), out _) ? 1 : 0);
+                ModKey.FromNameAndExtension("DSerCombatGameplayOverhaul.esp"), out _)
+                ? 1
+                : 0);
         }
 
         private static void PatchWeapons(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1488,6 +1490,49 @@ namespace Engarde_Synthesis
             }
         }
 
+        private static void PatchNpcs(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            foreach (INpcGetter npc in state.LoadOrder.PriorityOrder.WinningOverrides<INpcGetter>())
+            {
+                string? npcRaceEdid = npc.Race.Resolve(state.LinkCache)!.EditorID;
+                if (npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.SpellList) ||
+                    npc.Race.IsNull || npcRaceEdid.IsNullOrEmpty())
+                {
+                    continue;
+                }
+                if (!(/*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
+                      || npcRaceEdid == "AlduinRace" ||*/ npcRaceEdid.Contains("GiantRace") ||
+                      npcRaceEdid.Contains("LurkerRace")))
+                {
+                    continue;
+                }
+
+                INpc npcCopy = state.PatchMod.Npcs.GetOrAddAsOverride(npc);
+                if (_settings.Value.staggerSettings.weaponStagger)
+                {
+                    npcCopy.Attacks.ForEach(attack =>
+                    {
+                        if(!IsValidAttack(attack)) return;
+                        if (attack.AttackData!.Spell.IsNull &&
+                            !attack.AttackData.Flags.HasFlag(AttackData.Flag.BashAttack))
+                        {
+                            attack.AttackData.Spell = _mctSpells["MCT_NormalAttackSpell"];
+                        }
+                    });
+                }
+
+                if (npcRaceEdid.Contains("GiantRace") || npcRaceEdid.Contains("LurkerRace"))
+                {
+                    npcCopy.Perks ??= new ExtendedList<PerkPlacement>();
+                    npcCopy.Perks.Add(new PerkPlacement
+                    {
+                        Perk = Engarde.MakeFormKey(0x1DB9A2),
+                        Rank = 1
+                    });
+                }
+            }
+        }
+
         #endregion
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1505,8 +1550,9 @@ namespace Engarde_Synthesis
             PatchGlobals(state);
             PatchArmors(state);
             PatchWeapons(state);
-
             PatchRaces(state);
+
+            PatchNpcs(state);
         }
     }
 }
