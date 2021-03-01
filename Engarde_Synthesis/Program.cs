@@ -665,6 +665,100 @@ namespace Engarde_Synthesis
             }
         }
 
+        private static void SetSpiderAttackData(IAttack attack, FormKey attackSpellForm)
+        {
+            if (!IsValidAttack(attack))
+            {
+                return;
+            }
+
+            string attackEvent = attack.AttackEvent!;
+
+            if (attackEvent == "AttackStartLungeBite")
+            {
+                ChangeBasicAttackStats(attack, 45);
+                attack.AttackData!.Spell = _mctSpells["MCT_PowerAttackSpell"];
+            }
+
+            if (attackEvent == "AttackStart_ComboChop")
+            {
+                ChangeBasicAttackStats(attack, attackAngle: 20);
+            }
+
+            if (attackEvent.Contains("Bite"))
+            {
+                attack.AttackData!.Spell = attackSpellForm;
+            }
+        }
+
+        private static void SetGiantAttackData(IAttack attack, bool isGiant)
+        {
+            if (!IsValidAttack(attack))
+            {
+                return;
+            }
+
+            string attackEvent = attack.AttackEvent!;
+
+            switch (attackEvent)
+            {
+                case "attackPowerStart_ForwardPowerAttack":
+                    ChangeBasicAttackStats(attack, 15, 2, attackAngle: 10);
+                    attack.AttackData!.AttackType = _mctKeywords["MCT_VerticalAttack"];
+                    break;
+                case "attackPowerStart_Stomp":
+                    ChangeBasicAttackStats(attack, 30, 0.3f);
+                    attack.AttackData!.AttackType = _mctKeywords["MCT_StompAttack"];
+                    break;
+                case "attackStart_ClubAttack1":
+                {
+                    ChangeBasicAttackStats(attack, 50, attackAngle: 35);
+                    if (isGiant)
+                    {
+                        attack.AttackData!.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
+                        attack.AttackData.Spell = _mctSpells["MCT_PowerAttackSpell"];
+                    }
+
+                    break;
+                }
+                case "attackStart_HandSwipeAttack":
+                {
+                    ChangeBasicAttackStats(attack, 50, attackAngle: -35);
+                    if (isGiant)
+                    {
+                        attack.AttackData!.Flags.SetFlag(AttackData.Flag.PowerAttack, true);
+                        attack.AttackData.Spell = _mctSpells["MCT_PowerAttackSpell"];
+                    }
+
+                    break;
+                }
+                case "bashStart":
+                    ChangeBasicAttackStats(attack, damageMult: -0.5f);
+                    attack.AttackData!.Spell = _mctSpells["MCT_NormalAttackSpell"];
+                    break;
+            }
+        }
+        
+        private static void SetTrollAttackData(IAttack attack)
+        {
+            if (!IsValidAttack(attack)) {
+                return;
+            }
+            string attackEvent = attack.AttackEvent!;
+            
+            if (attackEvent.Contains("attackStartLeft")) {
+                ChangeBasicAttackStats(attack, 45, attackAngle:-45);
+            }
+            
+            else if (attackEvent.Contains("attackStartRight")) {
+                ChangeBasicAttackStats(attack, 45, attackAngle:45);
+            }
+            
+            else if (attackEvent.Contains("attackStartPower")) {
+                ChangeBasicAttackStats(attack, attackAngle:45);
+            }
+        }
+
         #endregion
 
         #region Patcher Methods
@@ -1036,8 +1130,11 @@ namespace Engarde_Synthesis
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist2"]);
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower2"]);
 
-                    raceCopy.Attacks.ForEach(
-                        attack => attack.AttackData!.AttackType = _mctKeywords["MCT_VerticalAttack"]);
+                    raceCopy.Attacks.ForEach(x =>
+                    {
+                        if(!IsValidAttack(x)) return;
+                        x.AttackData!.AttackType = _mctKeywords["MCT_VerticalAttack"];
+                    });
                 }
                 else if (raceCopy.EditorID.Contains("CowRace"))
                 {
@@ -1274,7 +1371,6 @@ namespace Engarde_Synthesis
                 {
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower1"]);
-                    ;
 
                     raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                     raceCopy.UnarmedReach = 64;
@@ -1283,7 +1379,6 @@ namespace Engarde_Synthesis
                 {
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower1"]);
-                    ;
 
                     raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                     raceCopy.UnarmedReach = 64;
@@ -1292,7 +1387,6 @@ namespace Engarde_Synthesis
                 {
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist2"]);
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower2"]);
-                    ;
 
                     raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                     raceCopy.UnarmedReach = 64;
@@ -1301,7 +1395,7 @@ namespace Engarde_Synthesis
                 {
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist0"]);
                     AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower0"]);
-                    
+
                     raceCopy.BaseMass = 0.7f;
 
                     raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
@@ -1310,6 +1404,7 @@ namespace Engarde_Synthesis
                 else if (raceCopy.EditorID.Contains("GiantRace") || raceCopy.EditorID.Contains("LurkerRace") ||
                          raceCopy.EditorID.Contains("OgreRace"))
                 {
+                    bool? isGiant = null;
                     if (raceCopy.EditorID.Contains("GiantRace"))
                     {
                         AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist4"]);
@@ -1317,282 +1412,175 @@ namespace Engarde_Synthesis
                         raceCopy.BaseMass = 8;
 
                         raceCopy.Starting[BasicStat.Health] += 500;
-                        
+
                         raceCopy.UnarmedDamage *= 2;
                         raceCopy.UnarmedReach = 250;
 
-                        var isGiant = true;
+                        isGiant = true;
                     }
 
-                    if (editorID.includes('LurkerRace') || editorID.includes('OgreRace'))
+                    if (raceCopy.EditorID.Contains("LurkerRace") || raceCopy.EditorID.Contains("OgreRace"))
                     {
-                        xelib.AddKeyword(record, locals.MCT_StaggerResist3);
-                        xelib.AddKeyword(record, locals.MCT_StaggerPower3);
-                        setBaseMass(record, 6);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist3"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower3"]);
+                        raceCopy.BaseMass = 6;
                     }
 
-                    if (settings.addArmorToArmored)
+                    if (_settings.Value.npcSettings.addArmorToArmored)
                     {
-                        xelib.AddArrayItem(record, 'Actor Effects', '', locals.MCT_BonusArmor250);
+                        raceCopy.ActorEffect.Add(_mctSpells["MCT_BonusArmor250"]);
                     }
 
-                    xelib.AddKeyword(record, locals.MCT_GiantRaceKW);
-                    xelib.AddKeyword(record, locals.critImmuneKW);
-                    xelib.AddKeyword(record, locals.injuryMoveSpeedKW);
-                    xelib.SetFloatValue(record, 'DATA - \\Angular Acceleration Rate', 5.0);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_GiantRaceKW"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_CritImmune"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_InjuryMoveSpeed"]);
 
-                    if (settings.giantTweaks)
+                    raceCopy.AngularAccelerationRate = 5;
+
+                    if (_settings.Value.npcSettings.giantTweaks)
                     {
-                        xelib.AddKeyword(record, locals.MCT_StaminaControlledKW);
-                        xelib.AddKeyword(record, locals.MCT_CanEnrage);
-                        xelib.SetFloatValue(record, 'DATA - \\Stamina Regen', 1.0);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_StaminaControlledKW"]);
+                        AddKeyword(raceCopy, _mctKeywords["MCT_CanEnrage"]);
+                        raceCopy.Regen[BasicStat.Stamina] = 1;
                     }
 
-                    if (xelib.HasElement(record, 'Attacks'))
+                    raceCopy.Attacks.ForEach(x => SetGiantAttackData(x, isGiant ?? false));
+                }
+                else if (raceCopy.EditorID.Contains("Mammoth"))
+                {
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist4"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower4"]);
+
+                    raceCopy.AngularAccelerationRate = 0.5f * _settings.Value.npcSettings.angularAccelerationMult;
+                    raceCopy.UnarmedReach = 128 * _settings.Value.npcSettings.unarmedReachMult;
+                }
+                else if (raceCopy.EditorID.Contains("Mudcrab"))
+                {
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist0"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower0"]);
+
+                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                    raceCopy.UnarmedReach = 64;
+
+                    raceCopy.Attacks.ForEach(x =>
                     {
-                        let attacks = xelib.GetElements(record, 'Attacks', false);
-                        attacks.forEach(setGiantAttackData(helpers, settings, locals, isGiant));
-                    }
+                        if (!IsValidAttack(x)) return;
+                        x.AttackData!.AttackType = _mctKeywords["MCT_VerticalAttack"];
+                    });
+                }
+                else if (raceCopy.EditorID.Contains("RieklingRace"))
+                {
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower1"]);
+                    raceCopy.BaseMass = 1;
+                    
+                    raceCopy.Attacks.ForEach(x =>
+                    {
+                        if (!IsValidAttack(x)) return;
+                        x.AttackData!.AttackType = _mctKeywords["MCT_VerticalAttack"];
+                    });
 
                     return;
                 }
-
-                // Mammoth
-                if (editorID.includes('Mammoth'))
+                else if (raceCopy.EditorID.Contains("SabreCat") || raceCopy.EditorID.Contains("MountainLionRace"))
                 {
-                    xelib.AddKeyword(record, locals.MCT_StaggerResist4);
-                    xelib.AddKeyword(record, locals.MCT_StaggerPower4);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist2"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower2"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_PaddedKW"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_InjuryBleed"]);
+                    raceCopy.BaseMass = 3;
 
-                    // base adjustment from vanilla
-                    xelib.SetFloatValue(record, 'DATA - \\Angular Acceleration Rate',
-                        0.5 * settings.angularAccelerationMult);
-                    xelib.SetFloatValue(record, 'DATA - \\Unarmed Reach', 128 * settings.unarmedReachMult);
-                    return
-                }
+                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                    raceCopy.UnarmedReach = 85 * _settings.Value.npcSettings.unarmedReachMult;
+                    raceCopy.UnarmedDamage *= 1.2f;
 
-                // MudCrab
-                if (editorID.includes('Mudcrab'))
-                {
-                    xelib.AddKeyword(record, locals.MCT_StaggerResist0);
-                    xelib.AddKeyword(record, locals.MCT_StaggerPower0);
-
-                    // base adjustment from vanilla
-                    xelib.SetFloatValue(record, 'DATA - \\Angular Acceleration Rate',
-                        0.25 * settings.angularAccelerationMult);
-                    xelib.SetFloatValue(record, 'DATA - \\Unarmed Reach', 64);
-
-                    // all MudCrab cat attacks are low enough to be considered vertical attacks
-                    if (xelib.HasElement(record, 'Attacks'))
+                    raceCopy.Attacks.ForEach(x =>
                     {
-                        let attacks = xelib.GetElements(record, 'Attacks', false);
-                        attacks.forEach(function(atk) {
-                            xelib.AddElementValue(atk, 'ATKD\\Attack Type', locals.MCT_VerticalAttack);
-                        });
+                        if (!IsValidAttack(x)) return;
+                        x.AttackData!.AttackType = _mctKeywords["MCT_VerticalAttack"];
+                    });
+                }
+                else if (raceCopy.EditorID.Contains("Skeleton") && !raceCopy.EditorID.Contains("Dragon"))
+                {
+                    if (_settings.Value.npcSettings.addArmorToArmored)
+                    {
+                        raceCopy.ActorEffect.Add(_mctSpells["MCT_BonusArmor250"]);
                     }
 
-                    return;
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist2"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_ArmoredKW"]);
+                    raceCopy.BaseMass = 1.5f;
+                    
+                    raceCopy.ActorEffect.Add(_mctSpells["MCT_NPCRaceSpell"]);
                 }
-
-                // RieklingRace
-                if (editorID.includes('RieklingRace'))
+                else if (raceCopy.EditorID.Contains("Skeever") || raceCopy.EditorID.Contains("Skeever"))
                 {
-                    xelib.AddKeyword(record, locals.MCT_StaggerResist1);
-                    xelib.AddKeyword(record, locals.MCT_StaggerResist1);
-                    setBaseMass(record, 1);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist0"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower0"]);
+                    
+                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                    raceCopy.UnarmedReach = 64;
 
-                    // all attacks are low enough to be considered vertical attacks
-                    if (xelib.HasElement(record, 'Attacks'))
+                    raceCopy.Attacks.ForEach(x =>
                     {
-                        let attacks = xelib.GetElements(record, 'Attacks', false);
-                        attacks.forEach(function(atk) {
-                            xelib.AddElementValue(atk, 'ATKD\\Attack Type', locals.MCT_VerticalAttack);
-                        });
-                    }
-
-                    return;
+                        if (!IsValidAttack(x)) return;
+                        x.AttackData!.AttackType = _mctKeywords["MCT_VerticalAttack"];
+                    });
                 }
-
-                // SabreCat
-                if (editorID.includes('SabreCat') || editorID.includes('MountainLionRace'))
+                else if (raceCopy.EditorID.Contains("Spriggan"))
                 {
-                    xelib.AddKeyword(record, locals.MCT_StaggerResist2);
-                    xelib.AddKeyword(record, locals.MCT_StaggerPower2);
-                    xelib.AddKeyword(record, locals.paddedKW);
-                    xelib.AddKeyword(record, locals.injuryBleedKW);
-                    setBaseMass(record, 3);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist1"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower1"]);
 
-                    // base adjustment from vanilla
-                    xelib.SetFloatValue(record, 'DATA - \\Angular Acceleration Rate',
-                        0.25 * settings.angularAccelerationMult);
-                    xelib.SetFloatValue(record, 'DATA - \\Unarmed Reach', 85 * settings.unarmedReachMult);
-
-                    xelib.SetFloatValue(record, 'DATA - \\Unarmed Damage',
-                        xelib.GetFloatValue(record, 'DATA - \\Unarmed Damage') * 1.2);
-
-                    // all sabre cat attacks are low enough to be considered vertical attacks
-                    if (xelib.HasElement(record, 'Attacks'))
-                    {
-                        let attacks = xelib.GetElements(record, 'Attacks', false);
-                        attacks.forEach(function(atk) {
-                            xelib.AddElementValue(atk, 'ATKD\\Attack Type', locals.MCT_VerticalAttack);
-                        });
-                    }
-
-                    return;
+                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                    raceCopy.UnarmedReach = 96 * _settings.Value.npcSettings.unarmedReachMult;
                 }
-
-                // SkeletonRace
-                if (editorID.includes('Skeleton') && !editorID.includes('Dragon'))
+                else if (raceCopy.EditorID.Contains("Troll") && raceCopy.EditorID.Contains("Race"))
                 {
-                    if (settings.addArmorToArmored)
-                    {
-                        xelib.AddArrayItem(record, 'Actor Effects', '', locals.MCT_BonusArmor250);
-                    }
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist2"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower2"]);
+                    raceCopy.BaseMass = 3;
 
-                    xelib.AddKeyword(record, locals.MCT_StaggerResist1);
-                    xelib.AddKeyword(record, locals.MCT_ArmoredKW);
-                    xelib.AddArrayItem(record, 'Actor Effects', '', locals.npcRace);
-                    setBaseMass(record, 1.5);
-                    return;
+                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                    raceCopy.UnarmedReach = 140 * _settings.Value.npcSettings.unarmedReachMult;
+                    
+                    raceCopy.Attacks.ForEach(SetTrollAttackData);
                 }
-
-                // Skeever
-                if (editorID.includes('Skeever') || editorID.includes('RatRace'))
+                else if (raceCopy.EditorID.Contains("VampireBeast"))
                 {
-                    xelib.AddKeyword(record, locals.MCT_StaggerResist0);
-                    xelib.AddKeyword(record, locals.MCT_StaggerPower0);
-
-                    // base adjustment from vanilla
-                    xelib.SetFloatValue(record, 'DATA - \\Angular Acceleration Rate',
-                        0.25 * settings.angularAccelerationMult);
-                    xelib.SetFloatValue(record, 'DATA - \\Unarmed Reach', 64);
-
-                    // all skeever attacks are low enough to be considered vertical attacks
-                    if (xelib.HasElement(record, 'Attacks'))
-                    {
-                        let attacks = xelib.GetElements(record, 'Attacks', false);
-                        attacks.forEach(function(atk) {
-                            xelib.AddElementValue(atk, 'ATKD\\Attack Type', locals.MCT_VerticalAttack);
-                        });
-                    }
-
-                    return
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerImmune"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_PaddedKW"]);
                 }
-
-                // Spriggan
-                if (editorID.includes('Spriggan'))
+                else if (raceCopy.EditorID.Contains("Wisp"))
                 {
-                    xelib.AddKeyword(record, locals.MCT_StaggerResist1);
-                    xelib.AddKeyword(record, locals.MCT_StaggerPower1);
-
-                    // base adjustment from vanilla
-                    xelib.SetFloatValue(record, 'DATA - \\Angular Acceleration Rate',
-                        0.25 * settings.angularAccelerationMult);
-                    xelib.SetFloatValue(record, 'DATA - \\Unarmed Reach', 96 * settings.unarmedReachMult);
-                    return
+                    raceCopy.BaseMass = 0.2f;
+                    
+                    raceCopy.AngularAccelerationRate = 1;
+                    raceCopy.UnarmedReach = 96 * _settings.Value.npcSettings.unarmedReachMult;
                 }
-
-                // Troll
-                if (editorID.includes('Troll') && editorID.includes('Race'))
+                else if (raceCopy.EditorID.Contains("WitchlightRace"))
                 {
-                    xelib.AddKeyword(record, locals.MCT_StaggerResist2);
-                    xelib.AddKeyword(record, locals.MCT_StaggerPower2);
-                    setBaseMass(record, 3);
-
-                    // base adjustment from vanilla
-                    xelib.SetFloatValue(record, 'DATA - \\Angular Acceleration Rate',
-                        0.25 * settings.angularAccelerationMult);
-                    xelib.SetFloatValue(record, 'DATA - \\Unarmed Reach', 140 * settings.unarmedReachMult);
-
-                    if (xelib.HasElement(record, 'Attacks'))
-                    {
-                        let attacks = xelib.GetElements(record, 'Attacks', false);
-                        attacks.forEach(setTrollAttackData);
-                    }
-
-                    return;
+                    raceCopy.BaseMass = 0.2f;
+                    
+                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                    raceCopy.UnarmedReach = 64;
                 }
-
-                // VampireLord
-                if (editorID.includes('VampireBeast'))
+                else if (raceCopy.EditorID.Contains("WolfRace"))
                 {
-                    xelib.AddKeyword(record, locals.MCT_StaggerImmune);
-                    xelib.AddKeyword(record, locals.paddedKW);
-                    return;
-                }
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerResist0"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_StaggerPower0"]);
+                    AddKeyword(raceCopy, _mctKeywords["MCT_InjuryBleed"]);
 
-                // Wisp
-                if (editorID.includes('Wisp'))
-                {
-                    setBaseMass(record, 0.2);
-
-                    // base adjustment from vanilla
-                    xelib.SetFloatValue(record, 'DATA - \\Angular Acceleration Rate', 1);
-                    xelib.SetFloatValue(record, 'DATA - \\Unarmed Reach', 96 * settings.unarmedReachMult);
-                    return
-                }
-
-                // WitchlightRace
-                if (editorID.includes('WitchlightRace'))
-                {
-                    setBaseMass(record, 0.2);
-
-                    // base adjustment from vanilla
-                    xelib.SetFloatValue(record, 'DATA - \\Angular Acceleration Rate',
-                        0.25 * settings.angularAccelerationMult);
-                    xelib.SetFloatValue(record, 'DATA - \\Unarmed Reach', 64);
-                    return;
-                }
-
-                // Wolf
-                if (editorID.includes('WolfRace'))
-                {
-                    xelib.AddKeyword(record, locals.MCT_StaggerResist0);
-                    xelib.AddKeyword(record, locals.MCT_StaggerPower0);
-                    xelib.AddKeyword(record, locals.injuryBleedKW);
-
-                    // base adjustment from vanilla
-                    xelib.SetFloatValue(record, 'DATA - \\Angular Acceleration Rate',
-                        0.3 * settings.angularAccelerationMult);
-                    xelib.SetFloatValue(record, 'DATA - \\Unarmed Reach', 64);
+                    raceCopy.AngularAccelerationRate = 0.3f * _settings.Value.npcSettings.angularAccelerationMult;
+                    raceCopy.UnarmedReach = 64;
 
                     // all Wolf attacks are low enough to be considered vertical attacks
-                    if (xelib.HasElement(record, 'Attacks'))
+                    raceCopy.Attacks.ForEach(x =>
                     {
-                        let attacks = xelib.GetElements(record, 'Attacks', false);
-                        attacks.forEach(function(atk) {
-                            xelib.AddElementValue(atk, 'ATKD\\Attack Type', locals.MCT_VerticalAttack);
-                        });
-                    }
-
-                    return;
+                        if (!IsValidAttack(x)) return;
+                        x.AttackData!.AttackType = _mctKeywords["MCT_VerticalAttack"];
+                    });
                 }
-            }
-        }
-
-        private static void SetSpiderAttackData(IAttack attack, FormKey attackSpellForm)
-        {
-            if (!IsValidAttack(attack))
-            {
-                return;
-            }
-
-            string attackEvent = attack.AttackEvent!;
-
-            if (attackEvent == "AttackStartLungeBite")
-            {
-                ChangeBasicAttackStats(attack, 45);
-                attack.AttackData!.Spell = _mctSpells["MCT_PowerAttackSpell"];
-            }
-
-            if (attackEvent == "AttackStart_ComboChop")
-            {
-                ChangeBasicAttackStats(attack, attackAngle: 20);
-            }
-
-            if (attackEvent.Contains("Bite"))
-            {
-                attack.AttackData!.Spell = attackSpellForm;
             }
         }
 
