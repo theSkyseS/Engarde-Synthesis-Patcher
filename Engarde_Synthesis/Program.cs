@@ -1601,36 +1601,38 @@ namespace Engarde_Synthesis
 
                 if (_settings.Value.basicAttacks.basicAttackTweaks)
                 {
-                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-                    switch (idleCopy.EditorID)
+                    switch (idle.EditorID)
                     {
                         case "NormalAttack":
                         {
-                            idleCopy.Conditions[1].Flags ^= Condition.Flag.OR;
-                            idleCopy.Conditions.Add(staminaCondition);
+                            IIdleAnimation idleCopy1 = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                            idleCopy1.Conditions[1].Flags ^= Condition.Flag.OR;
+                            idleCopy1.Conditions.Add(staminaCondition);
 
                             if (_settings.Value.basicAttacks.dwAttackTweaks)
                             {
-                                originalNormalAttackSibling = idleCopy.RelatedIdles[1];
-                                idleCopy.RelatedIdles[1] = leftHandAttack;
+                                originalNormalAttackSibling = idleCopy1.RelatedIdles[1];
+                                idleCopy1.RelatedIdles[1] = leftHandAttack;
                             }
 
                             break;
                         }
                         case "AttackRightH2H":
                         {
-                            idleCopy.Conditions.Add(staminaCondition);
+                            IIdleAnimation idleCopy2 = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                            idleCopy2.Conditions.Add(staminaCondition);
                             if (_settings.Value.basicAttacks.h2HAttackTweaks)
                             {
-                                originalH2HAttackSibling = idleCopy.RelatedIdles[1];
-                                idleCopy.RelatedIdles[1] = mctAttackLeftH2H;
+                                originalH2HAttackSibling = idleCopy2.RelatedIdles[1];
+                                idleCopy2.RelatedIdles[1] = mctAttackLeftH2H;
                             }
 
                             break;
                         }
                         case "BowAttack":
                         case "DualWieldPowerAttack":
-                            idleCopy.Conditions.Add(staminaCondition);
+                            IIdleAnimation idleCopy3 = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                            idleCopy3.Conditions.Add(staminaCondition);
                             break;
                     }
                 }
