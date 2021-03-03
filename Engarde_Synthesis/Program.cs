@@ -5,6 +5,7 @@ using Mutagen.Bethesda;
 using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.Skyrim;
 using System.Threading.Tasks;
+using Engarde_Synthesis.Settings;
 using Noggog;
 
 
@@ -1766,6 +1767,97 @@ namespace Engarde_Synthesis
             }
         }
 
+        private static void PatchDodges(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>()
+            )
+            {
+                if (!_settings.Value.defensiveActions.defensiveActions)
+                {
+                    break;
+                }
+
+                if (idle.EditorID.IsNullOrEmpty())
+                {
+                    continue;
+                }
+
+                if (!(idle.EditorID.Contains("MCTHeavyArmorDodge") || idle.EditorID.Contains("MCTLightArmorDodge")))
+                {
+                    continue;
+                }
+
+                if (!idle.EditorID.Contains("MCTDodge") && idle.EditorID.Contains("Standing"))
+                {
+                    continue;
+                }
+
+                IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                if (idleCopy.EditorID!.Contains("MCTHeavyArmorDodge") ||
+                    idleCopy.EditorID.Contains("MCTLightArmorDodge"))
+                {
+                    ConditionFloat condition = (ConditionFloat) idleCopy.Conditions[0];
+                    condition.ComparisonValue = _settings.Value.staminaSettings.minimumDodgeStamina;
+                }
+                else if (idleCopy.EditorID.Contains("HeavyArmor"))
+                {
+                    string animationType = "";
+                    if (_settings.Value.defensiveActions.heavyArmorDodge == DodgeType.Step)
+                    {
+                        animationType = "Run";
+                    }
+
+                    string animationEvent = "mctEscape";
+                    if (idleCopy.EditorID.Contains("Forward"))
+                    {
+                        animationEvent += "Forward" + animationType + "Start";
+                    }
+                    else if (idleCopy.EditorID.Contains("Backward"))
+                    {
+                        animationEvent += "Backward" + animationType + "Start";
+                    }
+                    else if (idleCopy.EditorID.Contains("Right"))
+                    {
+                        animationEvent += "Right" + animationType + "Start";
+                    }
+                    else
+                    {
+                        animationEvent += "Left" + animationType + "Start";
+                    }
+
+                    idleCopy.AnimationEvent = animationEvent;
+                }
+                else if (idleCopy.EditorID.Contains("LightArmor"))
+                {
+                    string animationType = "";
+                    if (_settings.Value.defensiveActions.lightArmorDodge == DodgeType.Step)
+                    {
+                        animationType = "Run";
+                    }
+
+                    string animationEvent = "mctEscape";
+                    if (idleCopy.EditorID.Contains("Forward"))
+                    {
+                        animationEvent += "Forward" + animationType + "Start";
+                    }
+                    else if (idleCopy.EditorID.Contains("Backward"))
+                    {
+                        animationEvent += "Backward" + animationType + "Start";
+                    }
+                    else if (idleCopy.EditorID.Contains("Right"))
+                    {
+                        animationEvent += "Right" + animationType + "Start";
+                    }
+                    else
+                    {
+                        animationEvent += "Left" + animationType + "Start";
+                    }
+
+                    idleCopy.AnimationEvent = animationEvent;
+                }
+            }
+        }
+
         #endregion
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1788,6 +1880,7 @@ namespace Engarde_Synthesis
 
             PatchAttacks(state);
             PatchPowerAttacks(state);
+            PatchDodges(state);
         }
     }
 }
