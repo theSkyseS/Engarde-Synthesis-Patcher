@@ -1717,6 +1717,55 @@ namespace Engarde_Synthesis
             }
         }
 
+        private static void PatchPowerAttacks(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            Condition disableCondition = new ConditionFloat
+            {
+                CompareOperator = CompareOperator.EqualTo,
+                ComparisonValue = 0,
+                Data = new FunctionConditionData
+                {
+                    Function = (int) ConditionData.Function.GetIsID,
+                    ParameterOneRecord = Skyrim.MakeFormKey(0x000007),
+                }
+            };
+            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>()
+            )
+            {
+                if (!_settings.Value.powerAttacks.powerAttackTweaks)
+                {
+                    break;
+                }
+
+                switch (idle.EditorID)
+                {
+                    case "DualWieldPowerAttackRoot":
+                    case "DualWieldSpecialPowerAttack":
+                    case "DefaultSheathe":
+                    case "AttackRightPower2HMForwardSprinting":
+                    case "AttackRightPower2HWForwardSprinting":
+                    case "AttackRightPowerForwardSprinting":
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.Conditions.Add(disableCondition);
+                        break;
+                    }
+                    case "PowerBash":
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.Conditions[1] = disableCondition;
+                        break;
+                    }
+                    case "PowerAttack":
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.Conditions[0] = disableCondition;
+                        break;
+                    }
+                }
+            }
+        }
+
         #endregion
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1738,6 +1787,7 @@ namespace Engarde_Synthesis
             PatchNpcs(state);
 
             PatchAttacks(state);
+            PatchPowerAttacks(state);
         }
     }
 }
