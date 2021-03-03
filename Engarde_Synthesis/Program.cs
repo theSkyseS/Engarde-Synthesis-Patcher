@@ -1914,6 +1914,38 @@ namespace Engarde_Synthesis
             }
         }
 
+        private static void PatchKillmoves(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            if (_settings.Value.npcSettings.playerKillMoveImmune)
+            {
+                return;
+            }
+            Condition disableCondition = new ConditionFloat()
+            {
+                CompareOperator = CompareOperator.EqualTo,
+                ComparisonValue = 0,
+                Data = new FunctionConditionData
+                {
+                    Function = (int) ConditionData.Function.GetIsID,
+                    ParameterOneRecord = Skyrim.MakeFormKey(0x000007),
+                }
+            };
+            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>()
+            )
+            {
+                if (!(idle.EditorID == "KillMoveShortRoot00" ||
+                      idle.EditorID == "KillMoveBackSideRoot00" ||
+                      idle.EditorID == "KillMoveShortRoot" ||
+                      idle.EditorID == "KillMoveBackSideRoot" ||
+                      idle.EditorID == "KillMoveDragonToNPC")) {
+                    continue;
+                }
+
+                IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                idleCopy.Conditions.Add(disableCondition);
+            }
+        }
+
         #endregion
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1933,11 +1965,13 @@ namespace Engarde_Synthesis
             PatchWeapons(state);
             PatchRaces(state);
             PatchNpcs(state);
-
             PatchAttacks(state);
             PatchPowerAttacks(state);
             PatchDodges(state);
             PatchWerewolves(state);
+
+            PatchKillmoves(state);
         }
+
     }
 }
