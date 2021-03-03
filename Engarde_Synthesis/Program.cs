@@ -1794,7 +1794,8 @@ namespace Engarde_Synthesis
                 {
                     IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                     string animationType = "";
-                    if (_settings.Value.defensiveActions.heavyArmorDodge == DodgeType.Step)
+                    //todo:restore enum
+                    if (_settings.Value.defensiveActions.heavyArmorDodge /*== DodgeType.step*/)
                     {
                         animationType = "Run";
                     }
@@ -1828,7 +1829,7 @@ namespace Engarde_Synthesis
                 {
                     IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                     string animationType = "";
-                    if (_settings.Value.defensiveActions.lightArmorDodge == DodgeType.Step)
+                    if (_settings.Value.defensiveActions.lightArmorDodge/* == DodgeType.step*/)
                     {
                         animationType = "Run";
                     }

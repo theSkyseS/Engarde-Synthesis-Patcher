@@ -1,4 +1,5 @@
-﻿using Mutagen.Bethesda.Synthesis.Settings;
+﻿using System.Collections.Generic;
+using Mutagen.Bethesda.Synthesis.Settings;
 
 namespace Engarde_Synthesis.Settings
 {
@@ -6,16 +7,12 @@ namespace Engarde_Synthesis.Settings
     {
         [SynthesisSettingName("Dodge and power block with the sneak key")]
         public bool defensiveActions { get; set; } = true;
-        [SynthesisSettingName("Heavy Armor dodge animation:")]
-        public DodgeType heavyArmorDodge = DodgeType.Roll;
-        [SynthesisSettingName("Light Armor dodge animation:")]
-        public DodgeType lightArmorDodge = DodgeType.Step;
-    }
 
-    public enum DodgeType
-    {
-        Roll = 0,
-        Step = 1
-        
+        //todo: restore enum
+        [SynthesisSettingName("Heavy Armor step dodge animation:")]
+        public bool heavyArmorDodge { get; set; } = false;
+
+        [SynthesisSettingName("Light Armor step dodge animation:")]
+        public bool lightArmorDodge { get; set; } = true;
     }
 }
