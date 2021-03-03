@@ -1782,25 +1782,17 @@ namespace Engarde_Synthesis
                     continue;
                 }
 
-                if (!(idle.EditorID.Contains("MCTHeavyArmorDodge") || idle.EditorID.Contains("MCTLightArmorDodge")))
+                if (idle.EditorID.Contains("MCTHeavyArmorDodge") ||
+                    idle.EditorID.Contains("MCTLightArmorDodge"))
                 {
-                    continue;
-                }
-
-                if (!idle.EditorID.Contains("MCTDodge") && idle.EditorID.Contains("Standing"))
-                {
-                    continue;
-                }
-
-                IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-                if (idleCopy.EditorID!.Contains("MCTHeavyArmorDodge") ||
-                    idleCopy.EditorID.Contains("MCTLightArmorDodge"))
-                {
+                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                     ConditionFloat condition = (ConditionFloat) idleCopy.Conditions[0];
                     condition.ComparisonValue = _settings.Value.staminaSettings.minimumDodgeStamina;
+                    idleCopy.Conditions[0] = condition;
                 }
-                else if (idleCopy.EditorID.Contains("HeavyArmor"))
+                else if (idle.EditorID.Contains("HeavyArmor"))
                 {
+                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                     string animationType = "";
                     if (_settings.Value.defensiveActions.heavyArmorDodge == DodgeType.Step)
                     {
@@ -1808,7 +1800,7 @@ namespace Engarde_Synthesis
                     }
 
                     string animationEvent = "mctEscape";
-                    if (idleCopy.EditorID.Contains("Forward"))
+                    if (idleCopy.EditorID!.Contains("Forward"))
                     {
                         animationEvent += "Forward" + animationType + "Start";
                     }
@@ -1820,15 +1812,21 @@ namespace Engarde_Synthesis
                     {
                         animationEvent += "Right" + animationType + "Start";
                     }
-                    else
+                    else if (idleCopy.EditorID.Contains("Left"))
                     {
                         animationEvent += "Left" + animationType + "Start";
+                    }
+                    else
+                    {
+                        animationType = "Run";
+                        animationEvent += "Standing" + animationType + "Start";
                     }
 
                     idleCopy.AnimationEvent = animationEvent;
                 }
-                else if (idleCopy.EditorID.Contains("LightArmor"))
+                else if (idle.EditorID.Contains("LightArmor"))
                 {
+                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                     string animationType = "";
                     if (_settings.Value.defensiveActions.lightArmorDodge == DodgeType.Step)
                     {
@@ -1836,7 +1834,7 @@ namespace Engarde_Synthesis
                     }
 
                     string animationEvent = "mctEscape";
-                    if (idleCopy.EditorID.Contains("Forward"))
+                    if (idleCopy.EditorID!.Contains("Forward"))
                     {
                         animationEvent += "Forward" + animationType + "Start";
                     }
@@ -1848,9 +1846,13 @@ namespace Engarde_Synthesis
                     {
                         animationEvent += "Right" + animationType + "Start";
                     }
-                    else
+                    else if (idleCopy.EditorID.Contains("Left"))
                     {
                         animationEvent += "Left" + animationType + "Start";
+                    }
+                    else
+                    {
+                        animationEvent += "Standing" + animationType + "Start";
                     }
 
                     idleCopy.AnimationEvent = animationEvent;
