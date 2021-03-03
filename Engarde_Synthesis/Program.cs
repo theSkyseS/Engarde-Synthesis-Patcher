@@ -5,6 +5,7 @@ using Mutagen.Bethesda;
 using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.Skyrim;
 using System.Threading.Tasks;
+using Engarde_Synthesis.Settings;
 using Noggog;
 
 
@@ -16,6 +17,7 @@ namespace Engarde_Synthesis
 
         private static readonly ModKey Engarde = ModKey.FromNameAndExtension("Engarde.esp");
         private static readonly ModKey Skyrim = ModKey.FromNameAndExtension("Skyrim.esm");
+        private static readonly ModKey Update = ModKey.FromNameAndExtension("Update.esm");
         private static Dictionary<string, FormKey> _mctKeywords = new();
         private static Dictionary<string, FormKey> _mctSpells = new();
         private static Lazy<Settings.Settings> _settings = null!;
@@ -1500,9 +1502,10 @@ namespace Engarde_Synthesis
                 {
                     continue;
                 }
-                if (!(/*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
+
+                if (!( /*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
                       || npcRaceEdid == "AlduinRace" ||*/ npcRaceEdid.Contains("GiantRace") ||
-                      npcRaceEdid.Contains("LurkerRace")))
+                                                          npcRaceEdid.Contains("LurkerRace")))
                 {
                     continue;
                 }
@@ -1512,7 +1515,7 @@ namespace Engarde_Synthesis
                 {
                     npcCopy.Attacks.ForEach(attack =>
                     {
-                        if(!IsValidAttack(attack)) return;
+                        if (!IsValidAttack(attack)) return;
                         if (attack.AttackData!.Spell.IsNull &&
                             !attack.AttackData.Flags.HasFlag(AttackData.Flag.BashAttack))
                         {
@@ -1529,6 +1532,330 @@ namespace Engarde_Synthesis
                         Perk = Engarde.MakeFormKey(0x1DB9A2),
                         Rank = 1
                     });
+                }
+            }
+        }
+
+        private static void PatchAttacks(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            var leftHandAttack = new FormLink<IIdleRelationGetter>(Skyrim.MakeFormKey(0x0BACC3));
+            var mctAttackLeftH2H = new FormLink<IIdleRelationGetter>(Engarde.MakeFormKey(0x28C013));
+            var nonMountedCombatRight = new FormLink<IIdleRelationGetter>(Update.MakeFormKey(0x000990));
+
+            IFormLink<IIdleRelationGetter> originalNormalAttackSibling = new FormLink<IIdleRelationGetter>();
+            IFormLink<IIdleRelationGetter> originalH2HAttackSibling = new FormLink<IIdleRelationGetter>();
+            IFormLink<IIdleRelationGetter> originalLeftHandAttackSibling = new FormLink<IIdleRelationGetter>();
+
+            ConditionFloat staminaCondition = new()
+            {
+                CompareOperator = CompareOperator.GreaterThan,
+                ComparisonValue = _settings.Value.staminaSettings.minimumStamina,
+                Data = new FunctionConditionData
+                {
+                    Function = (int) ConditionData.Function.GetActorValue,
+                    ParameterOneNumber = 26
+                }
+            };
+            ConditionFloat staminaPercentCondition = new()
+            {
+                CompareOperator = CompareOperator.GreaterThan,
+                ComparisonValue = 0.5f,
+                Data = new FunctionConditionData
+                {
+                    Function = (int) ConditionData.Function.GetActorValuePercent,
+                    ParameterOneNumber = 26
+                }
+            };
+
+            ConditionFloat lastAttackIsRightCondition = new()
+            {
+                CompareOperator = CompareOperator.EqualTo,
+                ComparisonValue = 1,
+                Data = new FunctionConditionData
+                {
+                    Function = (int) ConditionData.Function.GetVMQuestVariable,
+
+                    ParameterOneRecord = Engarde.MakeFormKey(0x2510DF),
+                    ParameterTwoString = "::lastAttackIsRightHand_var"
+                }
+            };
+            ConditionFloat isStaggeringAttackCondition = new()
+            {
+                CompareOperator = CompareOperator.EqualTo,
+                ComparisonValue = 1,
+                Data = new FunctionConditionData
+                {
+                    Function = (int) ConditionData.Function.GetVMQuestVariable,
+
+                    ParameterOneRecord = Engarde.MakeFormKey(0x2510DF),
+                    ParameterTwoString = "::isStaggeringAttack_var"
+                }
+            };
+
+            foreach (IIdleAnimationGetter idle in
+                state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>())
+            {
+                if (idle.EditorID.IsNullOrEmpty())
+                {
+                    continue;
+                }
+
+                if (_settings.Value.basicAttacks.basicAttackTweaks)
+                {
+                    switch (idle.EditorID)
+                    {
+                        case "NormalAttack":
+                        {
+                            IIdleAnimation idleCopy1 = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                            idleCopy1.Conditions[1].Flags ^= Condition.Flag.OR;
+                            idleCopy1.Conditions.Add(staminaCondition);
+
+                            if (_settings.Value.basicAttacks.dwAttackTweaks)
+                            {
+                                originalNormalAttackSibling = idleCopy1.RelatedIdles[1];
+                                idleCopy1.RelatedIdles[1] = leftHandAttack;
+                            }
+
+                            break;
+                        }
+                        case "AttackRightH2H":
+                        {
+                            IIdleAnimation idleCopy2 = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                            idleCopy2.Conditions.Add(staminaCondition);
+                            if (_settings.Value.basicAttacks.h2HAttackTweaks)
+                            {
+                                originalH2HAttackSibling = idleCopy2.RelatedIdles[1];
+                                idleCopy2.RelatedIdles[1] = mctAttackLeftH2H;
+                            }
+
+                            break;
+                        }
+                        case "BowAttack":
+                        case "DualWieldPowerAttack":
+                            IIdleAnimation idleCopy3 = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                            idleCopy3.Conditions.Add(staminaCondition);
+                            break;
+                    }
+                }
+            }
+
+            foreach (IIdleAnimationGetter idle in
+                state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>())
+            {
+                if (idle.EditorID.IsNullOrEmpty())
+                {
+                    continue;
+                }
+
+                if (_settings.Value.basicAttacks.basicAttackTweaks &&
+                    _settings.Value.basicAttacks.dwAttackTweaks && idle.EditorID == "LeftHandAttack")
+                {
+                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                    originalLeftHandAttackSibling = idleCopy.RelatedIdles[1];
+
+                    idleCopy.RelatedIdles[0] = nonMountedCombatRight;
+                    idleCopy.RelatedIdles[1] = originalNormalAttackSibling;
+
+                    idleCopy.Conditions.Add(lastAttackIsRightCondition);
+                    idleCopy.Conditions.Add(staminaCondition);
+                }
+
+                if (_settings.Value.basicAttacks.basicAttackTweaks && _settings.Value.basicAttacks.h2HAttackTweaks)
+                {
+                    switch (idle.EditorID)
+                    {
+                        case "AttackLeftH2H":
+                        {
+                            IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                            idleCopy.AnimationEvent = "blockStart";
+                            break;
+                        }
+                        case "MCTAttackLeftH2H":
+                        {
+                            IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                            idleCopy.RelatedIdles[0] = nonMountedCombatRight;
+                            idleCopy.RelatedIdles[1] = originalH2HAttackSibling;
+
+                            idleCopy.Conditions.Add(staminaCondition);
+                            break;
+                        }
+                    }
+                }
+
+                switch (idle.EditorID)
+                {
+                    case "MCTPowerAttack" when _settings.Value.powerAttacks.powerAttackTweaks:
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+
+                        idleCopy.RelatedIdles[0] = new FormLink<IIdleAnimationGetter>(Skyrim.MakeFormKey(0x046BB0));
+                        idleCopy.RelatedIdles[1] = new FormLink<IIdleAnimationGetter>(Skyrim.MakeFormKey(0x046BB2));
+                        break;
+                    }
+                    case "DragonstaggerStart" when _settings.Value.npcSettings.dragonTweaks:
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.Conditions.Add(isStaggeringAttackCondition);
+                        break;
+                    }
+                    case "FlyStartTakeOff" or "FlyStartTakeOffVertical" when _settings.Value.npcSettings.dragonTweaks:
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.Conditions.Add(staminaPercentCondition);
+                        break;
+                    }
+                }
+            }
+
+            foreach (IIdleAnimationGetter idle in
+                state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>())
+            {
+                if (idle.EditorID == "BlockingStart" && _settings.Value.basicAttacks.dwAttackTweaks)
+                {
+                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                    idleCopy.RelatedIdles[1] = originalLeftHandAttackSibling;
+                }
+            }
+        }
+
+        private static void PatchPowerAttacks(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            Condition disableCondition = new ConditionFloat
+            {
+                CompareOperator = CompareOperator.EqualTo,
+                ComparisonValue = 0,
+                Data = new FunctionConditionData
+                {
+                    Function = (int) ConditionData.Function.GetIsID,
+                    ParameterOneRecord = Skyrim.MakeFormKey(0x000007),
+                }
+            };
+            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>()
+            )
+            {
+                if (!_settings.Value.powerAttacks.powerAttackTweaks)
+                {
+                    break;
+                }
+
+                switch (idle.EditorID)
+                {
+                    case "DualWieldPowerAttackRoot":
+                    case "DualWieldSpecialPowerAttack":
+                    case "DefaultSheathe":
+                    case "AttackRightPower2HMForwardSprinting":
+                    case "AttackRightPower2HWForwardSprinting":
+                    case "AttackRightPowerForwardSprinting":
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.Conditions.Add(disableCondition);
+                        break;
+                    }
+                    case "PowerBash":
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.Conditions[1] = disableCondition;
+                        break;
+                    }
+                    case "PowerAttack":
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.Conditions[0] = disableCondition;
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static void PatchDodges(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>()
+            )
+            {
+                if (!_settings.Value.defensiveActions.defensiveActions)
+                {
+                    break;
+                }
+
+                if (idle.EditorID.IsNullOrEmpty())
+                {
+                    continue;
+                }
+
+                if (idle.EditorID.Contains("MCTHeavyArmorDodge") ||
+                    idle.EditorID.Contains("MCTLightArmorDodge"))
+                {
+                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                    ConditionFloat condition = (ConditionFloat) idleCopy.Conditions[0];
+                    condition.ComparisonValue = _settings.Value.staminaSettings.minimumDodgeStamina;
+                    idleCopy.Conditions[0] = condition;
+                }
+                else if (idle.EditorID.Contains("HeavyArmor"))
+                {
+                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                    string animationType = "";
+                    if (_settings.Value.defensiveActions.heavyArmorDodge == DodgeType.Step)
+                    {
+                        animationType = "Run";
+                    }
+
+                    string animationEvent = "mctEscape";
+                    if (idleCopy.EditorID!.Contains("Forward"))
+                    {
+                        animationEvent += "Forward" + animationType + "Start";
+                    }
+                    else if (idleCopy.EditorID.Contains("Backward"))
+                    {
+                        animationEvent += "Backward" + animationType + "Start";
+                    }
+                    else if (idleCopy.EditorID.Contains("Right"))
+                    {
+                        animationEvent += "Right" + animationType + "Start";
+                    }
+                    else if (idleCopy.EditorID.Contains("Left"))
+                    {
+                        animationEvent += "Left" + animationType + "Start";
+                    }
+                    else
+                    {
+                        animationType = "Run";
+                        animationEvent += "Standing" + animationType + "Start";
+                    }
+
+                    idleCopy.AnimationEvent = animationEvent;
+                }
+                else if (idle.EditorID.Contains("LightArmor"))
+                {
+                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                    string animationType = "";
+                    if (_settings.Value.defensiveActions.lightArmorDodge == DodgeType.Step)
+                    {
+                        animationType = "Run";
+                    }
+
+                    string animationEvent = "mctEscape";
+                    if (idleCopy.EditorID!.Contains("Forward"))
+                    {
+                        animationEvent += "Forward" + animationType + "Start";
+                    }
+                    else if (idleCopy.EditorID.Contains("Backward"))
+                    {
+                        animationEvent += "Backward" + animationType + "Start";
+                    }
+                    else if (idleCopy.EditorID.Contains("Right"))
+                    {
+                        animationEvent += "Right" + animationType + "Start";
+                    }
+                    else if (idleCopy.EditorID.Contains("Left"))
+                    {
+                        animationEvent += "Left" + animationType + "Start";
+                    }
+                    else
+                    {
+                        animationEvent += "Standing" + animationType + "Start";
+                    }
+
+                    idleCopy.AnimationEvent = animationEvent;
                 }
             }
         }
@@ -1551,8 +1878,11 @@ namespace Engarde_Synthesis
             PatchArmors(state);
             PatchWeapons(state);
             PatchRaces(state);
-
             PatchNpcs(state);
+
+            PatchAttacks(state);
+            PatchPowerAttacks(state);
+            PatchDodges(state);
         }
     }
 }
