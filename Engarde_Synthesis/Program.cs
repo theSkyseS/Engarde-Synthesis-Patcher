@@ -1552,7 +1552,7 @@ namespace Engarde_Synthesis
                 Data = new FunctionConditionData
                 {
                     Function = (int) ConditionData.Function.GetActorValue,
-                    ParameterOneString = "Stamina"
+                    ParameterOneNumber = 26
                 }
             };
             ConditionFloat staminaPercentCondition = new()
@@ -1562,7 +1562,7 @@ namespace Engarde_Synthesis
                 Data = new FunctionConditionData
                 {
                     Function = (int) ConditionData.Function.GetActorValuePercent,
-                    ParameterOneString = "Stamina"
+                    ParameterOneNumber = 26
                 }
             };
 
@@ -1681,34 +1681,38 @@ namespace Engarde_Synthesis
                     }
                 }
 
-                if (idle.EditorID == "MCTPowerAttack" && _settings.Value.powerAttacks.powerAttackTweaks)
+                switch (idle.EditorID)
                 {
-                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-
-                    idleCopy.RelatedIdles[0] = new FormLink<IIdleAnimationGetter>(Skyrim.MakeFormKey(0x046BB0));
-                    idleCopy.RelatedIdles[1] = new FormLink<IIdleAnimationGetter>(Skyrim.MakeFormKey(0x046BB2));
-                }
-
-                if (idle.EditorID == "DragonstaggerStart" && _settings.Value.npcSettings.dragonTweaks)
-                {
-                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-                    idleCopy.Conditions.Add(isStaggeringAttackCondition);
-                }
-
-                if ((idle.EditorID == "FlyStartTakeOff" || idle.EditorID == "FlyStartTakeOffVertical") &&
-                    _settings.Value.npcSettings.dragonTweaks)
-                {
-                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-                    idleCopy.Conditions.Add(staminaPercentCondition);
-                }
-
-                if (idle.EditorID == "BlockingStart")
-                {
-                    if (_settings.Value.basicAttacks.dwAttackTweaks)
+                    case "MCTPowerAttack" when _settings.Value.powerAttacks.powerAttackTweaks:
                     {
                         IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-                        idleCopy.RelatedIdles[1] = originalLeftHandAttackSibling;
+
+                        idleCopy.RelatedIdles[0] = new FormLink<IIdleAnimationGetter>(Skyrim.MakeFormKey(0x046BB0));
+                        idleCopy.RelatedIdles[1] = new FormLink<IIdleAnimationGetter>(Skyrim.MakeFormKey(0x046BB2));
+                        break;
                     }
+                    case "DragonstaggerStart" when _settings.Value.npcSettings.dragonTweaks:
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.Conditions.Add(isStaggeringAttackCondition);
+                        break;
+                    }
+                    case "FlyStartTakeOff" or "FlyStartTakeOffVertical" when _settings.Value.npcSettings.dragonTweaks:
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.Conditions.Add(staminaPercentCondition);
+                        break;
+                    }
+                }
+            }
+
+            foreach (IIdleAnimationGetter idle in
+                state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>())
+            {
+                if (idle.EditorID == "BlockingStart" && _settings.Value.basicAttacks.dwAttackTweaks)
+                {
+                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                    idleCopy.RelatedIdles[1] = originalLeftHandAttackSibling;
                 }
             }
         }
