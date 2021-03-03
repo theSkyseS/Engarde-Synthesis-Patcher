@@ -2,8 +2,8 @@
 {
     public enum DodgeType
     {
-        roll,
-        step
+        Roll,
+        Step
     }
 
     

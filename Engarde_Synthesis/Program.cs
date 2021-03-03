@@ -1853,10 +1853,63 @@ namespace Engarde_Synthesis
                     }
                     else
                     {
+                        animationType = "Run";
                         animationEvent += "Standing" + animationType + "Start";
                     }
 
                     idleCopy.AnimationEvent = animationEvent;
+                }
+            }
+        }
+
+        
+        private static void PatchWerewolves(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>()
+            )
+            {
+                if (!(idle.EditorID == "WerewolfSheathe" ||
+                      idle.EditorID == "WerewolfRightAttackFast" ||
+                      idle.EditorID == "WerewolfAttackLeftFast" ||
+                      idle.EditorID == "WerewolfLeftPowerAttackRoot" ||
+                      idle.EditorID == "WerewolfRightPowerAttackRoot" ||
+                      idle.EditorID == "MCTPowerAttackRootBeast"))
+                {
+                    continue;
+                }
+
+                IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+			
+                
+                if (idleCopy.EditorID! == "WerewolfSheathe")
+                {
+                    idleCopy.RelatedIdles[1] = new FormLink<IIdleRelationGetter>(Engarde.MakeFormKey(0x29369E));
+                }
+                
+                else if (idleCopy.EditorID == "WerewolfRightAttackFast" || idleCopy.EditorID == "WerewolfAttackLeftFast")
+                {
+                    ConditionFloat condition = new()
+                    {
+                        CompareOperator = CompareOperator.GreaterThan,
+                        ComparisonValue = _settings.Value.staminaSettings.minimumStamina,
+                        Data = new FunctionConditionData
+                        {
+                            Function = (int) ConditionData.Function.GetActorValue,
+                            ParameterOneNumber = 26
+                        }
+                    };
+                    idleCopy.Conditions.Add(condition);
+                }
+                
+                else if (idleCopy.EditorID == "WerewolfLeftPowerAttackRoot" ||
+                         idleCopy.EditorID == "WerewolfRightPowerAttackRoot")
+                {
+                    idleCopy.Conditions[3].CompareOperator = CompareOperator.NotEqualTo;
+                }
+                
+                else if (idleCopy.EditorID == "MCTPowerAttackRootBeast")
+                {
+                    idleCopy.RelatedIdles[0] = new FormLink<IIdleRelationGetter>(Skyrim.MakeFormKey(0x04C296));
                 }
             }
         }
@@ -1884,6 +1937,7 @@ namespace Engarde_Synthesis
             PatchAttacks(state);
             PatchPowerAttacks(state);
             PatchDodges(state);
+            PatchWerewolves(state);
         }
     }
 }
