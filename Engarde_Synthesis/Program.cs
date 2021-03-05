@@ -16,6 +16,7 @@ namespace Engarde_Synthesis
 
         private static readonly ModKey Engarde = ModKey.FromNameAndExtension("Engarde.esp");
         private static readonly ModKey Skyrim = ModKey.FromNameAndExtension("Skyrim.esm");
+        private static readonly ModKey Dragonborn = ModKey.FromNameAndExtension("Dragonborn.esm");
         private static readonly ModKey Update = ModKey.FromNameAndExtension("Update.esm");
         private static Dictionary<string, FormKey> _mctKeywords = new();
         private static Dictionary<string, FormKey> _mctSpells = new();
@@ -113,10 +114,10 @@ namespace Engarde_Synthesis
         #region Auxiliary Methods
 
         private static void ChangeGlobalShortValue(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
-            IGlobalGetter global, short value)
+            IGlobalGetter global, int value)
         {
             var globalCopy = (IGlobalShort) state.PatchMod.Globals.GetOrAddAsOverride(global);
-            globalCopy.Data = value;
+            globalCopy.Data = (short) value;
         }
 
         private static void AddKeyword(IKeyworded<IKeywordGetter> keyworded, FormKey keywordForm)
@@ -1453,7 +1454,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = _settings.Value.staminaSettings.minimumStamina,
                 Data = new FunctionConditionData
                 {
-                    Function = (int) ConditionData.Function.GetActorValue, ParameterOneNumber = 26
+                    Function = (ushort) ConditionData.Function.GetActorValue, ParameterOneNumber = 26
                 }
             };
             ConditionFloat staminaPercentCondition = new()
@@ -1462,7 +1463,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 0.5f,
                 Data = new FunctionConditionData
                 {
-                    Function = (int) ConditionData.Function.GetActorValuePercent, ParameterOneNumber = 26
+                    Function = (ushort) ConditionData.Function.GetActorValuePercent, ParameterOneNumber = 26
                 }
             };
             ConditionFloat lastAttackIsRightCondition = new()
@@ -1471,7 +1472,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 1,
                 Data = new FunctionConditionData
                 {
-                    Function = (int) ConditionData.Function.GetVMQuestVariable,
+                    Function = (ushort) ConditionData.Function.GetVMQuestVariable,
                     ParameterOneRecord = Engarde.MakeFormKey(0x2510DF),
                     ParameterTwoString = "::lastAttackIsRightHand_var"
                 }
@@ -1482,7 +1483,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 1,
                 Data = new FunctionConditionData
                 {
-                    Function = (int) ConditionData.Function.GetVMQuestVariable,
+                    Function = (ushort) ConditionData.Function.GetVMQuestVariable,
                     ParameterOneRecord = Engarde.MakeFormKey(0x2510DF),
                     ParameterTwoString = "::isStaggeringAttack_var"
                 }
@@ -1616,7 +1617,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 0,
                 Data = new FunctionConditionData
                 {
-                    Function = (int) ConditionData.Function.GetIsID,
+                    Function = (ushort) ConditionData.Function.GetIsID,
                     ParameterOneRecord = Skyrim.MakeFormKey(0x000007),
                 }
             };
@@ -1684,7 +1685,7 @@ namespace Engarde_Synthesis
                     IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                     string animationType = "";
                     //todo:restore enum
-                    if (_settings.Value.defensiveActions.heavyArmorDodge /*== DodgeType.step*/)
+                    if (_settings.Value.defensiveActions.heavyArmorDodge == DodgeType.Step)
                     {
                         animationType = "Run";
                     }
@@ -1718,7 +1719,7 @@ namespace Engarde_Synthesis
                 {
                     IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                     string animationType = "";
-                    if (_settings.Value.defensiveActions.lightArmorDodge/* == DodgeType.step*/)
+                    if (_settings.Value.defensiveActions.lightArmorDodge == DodgeType.Step)
                     {
                         animationType = "Run";
                     }
@@ -1780,7 +1781,7 @@ namespace Engarde_Synthesis
                                 ComparisonValue = _settings.Value.staminaSettings.minimumStamina,
                                 Data = new FunctionConditionData
                                 {
-                                    Function = (int) ConditionData.Function.GetActorValue, ParameterOneNumber = 26
+                                    Function = (ushort) ConditionData.Function.GetActorValue, ParameterOneNumber = 26
                                 }
                             };
                             idleCopy.Conditions.Add(condition);
@@ -1803,7 +1804,7 @@ namespace Engarde_Synthesis
 
         private static void PatchKillmoves(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            if (_settings.Value.npcSettings.playerKillMoveImmune)
+            if (!_settings.Value.npcSettings.playerKillMoveImmune)
             {
                 return;
             }
@@ -1814,7 +1815,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 0,
                 Data = new FunctionConditionData
                 {
-                    Function = (int) ConditionData.Function.GetIsID,
+                    Function = (ushort) ConditionData.Function.GetIsID,
                     ParameterOneRecord = Skyrim.MakeFormKey(0x000007),
                 }
             };
@@ -1853,7 +1854,7 @@ namespace Engarde_Synthesis
                         ComparisonValue = 1,
                         Data = new FunctionConditionData
                         {
-                            Function = (int) ConditionData.Function.GetVMQuestVariable,
+                            Function = (ushort) ConditionData.Function.GetVMQuestVariable,
                             ParameterOneRecord = Engarde.MakeFormKey(0x27D2E9),
                             ParameterTwoString = "::wantsToSneak_var"
                         }
@@ -2019,6 +2020,85 @@ namespace Engarde_Synthesis
             PatchDefensiveMoves(state);
             
             PatchEffects(state);
+        }
+
+        private static void PatchEffects(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            VirtualMachineAdapter fireScript = new()
+            {
+                ObjectFormat = (ushort) 2,
+                Scripts =
+                {
+                    new ScriptEntry
+                    {
+                        Flags = ScriptEntry.Flag.Local,
+                        Name = "MCT_ApplyBurning",
+                        Properties =
+                        {
+                            new ScriptObjectProperty
+                            {
+                                Name = "MCT_BurningSpell",
+                                Flags = ScriptProperty.Flag.Edited,
+                                Object = Engarde.MakeFormKey(0x284EE2)
+                            }
+                        }
+                    }
+                }
+            };
+            VirtualMachineAdapter frostScript = new()
+            {
+                ObjectFormat = (ushort) 2,
+                Scripts =
+                {
+                    new ScriptEntry
+                    {
+                        Flags = ScriptEntry.Flag.Local,
+                        Name = "MCT_ApplyFrostSlow",
+                        Properties =
+                        {
+                            new ScriptObjectProperty
+                            {
+                                Name = "MCT_FrostSlowSpell",
+                                Flags = ScriptProperty.Flag.Edited,
+                                Object = Engarde.MakeFormKey(0x27923B)
+                            }
+                        }
+                    }
+                }
+            };
+            foreach (IMagicEffectGetter effect in state.LoadOrder.PriorityOrder.WinningOverrides<IMagicEffectGetter>())
+            {
+                if ((effect.EditorID == "VoiceDragonFireBreathEffect1" ||
+                     effect.EditorID == "VoiceDragonFireballEffect1") && _settings.Value.npcSettings.dragonTweaks)
+                {
+                    IMagicEffect effectCopy = state.PatchMod.MagicEffects.GetOrAddAsOverride(effect);
+                    effectCopy.ResistValue = ActorValue.None;
+                    AddKeyword(effectCopy, Engarde.MakeFormKey(0x277748));
+                    effectCopy.TaperDuration = 0.5f; // effect with 0 duration won't have be able to get magnitude
+                    effectCopy.VirtualMachineAdapter = fireScript;
+                }
+
+                else if ((effect.EditorID == "VoiceDragonFrostBreathEffect1" ||
+                          effect.EditorID == "VoiceDragonFrostIceStormEffect") &&
+                         _settings.Value.npcSettings.dragonTweaks)
+                {
+                    IMagicEffect effectCopy = state.PatchMod.MagicEffects.GetOrAddAsOverride(effect);
+                    effectCopy.ResistValue = ActorValue.None;
+                    effectCopy.SecondActorValueWeight = 0.1f; // less stamina damage
+                    effectCopy.VirtualMachineAdapter = frostScript;
+                }
+
+                else if (effect.EditorID == "MCT_DragonInjuryMouth" && state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dragonborn.esm")))
+                {
+                    IMagicEffect effectCopy = state.PatchMod.MagicEffects.GetOrAddAsOverride(effect);
+                    ScriptObjectProperty property = (ScriptObjectProperty)effectCopy.VirtualMachineAdapter!.Scripts[1].Properties[7];
+                    property.Object = Dragonborn.MakeFormKey(0x036131);
+                    effectCopy.VirtualMachineAdapter!.Scripts[1].Properties[7] = property;
+                    property = (ScriptObjectProperty) effectCopy.VirtualMachineAdapter!.Scripts[1].Properties[8];
+                    property.Object = Dragonborn.MakeFormKey(0x3612B);
+                    effectCopy.VirtualMachineAdapter!.Scripts[1].Properties[8] = property;
+                }
+            }
         }
     }
 }
