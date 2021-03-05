@@ -1866,6 +1866,131 @@ namespace Engarde_Synthesis
             }
         }
 
+        private static void PatchDefensiveMoves(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            Condition isPowerBlocking = new ConditionFloat
+            {
+                ComparisonValue = 0,
+                CompareOperator = CompareOperator.EqualTo,
+                Data = new FunctionConditionData
+                {
+                    Function = (ushort) ConditionData.Function.HasMagicEffect,
+                    ParameterOneRecord = Engarde.MakeFormKey(0x27A7CC)
+                }
+            };
+            Condition isNotMovingForward = new ConditionFloat
+            {
+                ComparisonValue = 1,
+                CompareOperator = CompareOperator.NotEqualTo,
+                Data = new FunctionConditionData
+                {
+                    Function = (ushort) ConditionData.Function.GetMovementDirection
+                }
+            };
+            Condition isNotPlayer = new ConditionFloat
+            {
+                ComparisonValue = 1,
+                CompareOperator = CompareOperator.NotEqualTo,
+                Flags = Condition.Flag.OR,
+                Data = new FunctionConditionData
+                {
+                    Function = (ushort) ConditionData.Function.GetIsID,
+                    ParameterOneNumber = 0x000007
+                }
+            };
+            Condition isSneakPressed = new ConditionFloat
+            {
+                ComparisonValue = 1,
+                CompareOperator = CompareOperator.EqualTo,
+                Flags = Condition.Flag.OR,
+                Data = new FunctionConditionData
+                {
+                    Function = (ushort) ConditionData.Function.GetVMQuestVariable,
+                    ParameterOneRecord = Engarde.MakeFormKey(0x27D2E9),
+                    ParameterTwoString = "::wantsToSneak_var"
+                }
+            };
+            Condition isBlocking = new ConditionFloat
+            {
+                CompareOperator = CompareOperator.EqualTo,
+                ComparisonValue = 1,
+                Flags = Condition.Flag.OR,
+                Data = new FunctionConditionData
+                {
+                    Function = (ushort) ConditionData.Function.IsBlocking
+                }
+            };
+            Condition isStaggered = new ConditionFloat
+            {
+                CompareOperator = CompareOperator.EqualTo,
+                ComparisonValue = 1,
+                Flags = Condition.Flag.OR,
+                Data = new FunctionConditionData
+                {
+                    Function = (ushort) ConditionData.Function.GetGraphVariableInt,
+                    ParameterOneString = "IsStaggering"
+                }
+            };
+            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>()
+            )
+            {
+                switch (idle.EditorID)
+                {
+                    case "BlockHit" when _settings.Value.defensiveActions.defensiveActions:
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.Conditions.Add(isPowerBlocking);
+                        break;
+                    }
+                    case "SneakStart":
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        if (_settings.Value.sprintToSneak)
+                        {
+                            idleCopy.Conditions.Add(isNotMovingForward);
+                        }
+
+                        if (_settings.Value.defensiveActions.defensiveActions)
+                        {
+                            idleCopy.Conditions.Add(isNotPlayer);
+                            idleCopy.Conditions.Add(isSneakPressed);
+
+                            if (!foundAnotherSneakRootChild)
+                            {
+                                idleCopy.RelatedIdles[1] =
+                                    new FormLink<IIdleRelationGetter>(Engarde.MakeFormKey(0x27DDB7));
+                            }
+                        }
+
+                        break;
+                    }
+                    case "SneakStop":
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        if (_settings.Value.sprintToSneak)
+                        {
+                            idleCopy.Conditions.Add(isNotMovingForward);
+                        }
+
+                        break;
+                    }
+                    case "MCTDefensiveMoves" when _settings.Value.defensiveActions.defensiveActions:
+                    {
+                        IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                        idleCopy.RelatedIdles[0] = new FormLink<IIdleRelationGetter>(Skyrim.MakeFormKey(0x02F3F7));
+
+                        if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Ultimate Dodge Mod.esp")))
+                        {
+                            idleCopy.Conditions.Add(isBlocking);
+                            idleCopy.Conditions.Add(isStaggered);
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+
         #endregion
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1891,6 +2016,9 @@ namespace Engarde_Synthesis
             PatchWerewolves(state);
             PatchKillmoves(state);
             PatchIdles(state);
+            PatchDefensiveMoves(state);
+            
+            PatchEffects(state);
         }
     }
 }
