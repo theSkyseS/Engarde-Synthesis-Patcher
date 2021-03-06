@@ -635,7 +635,7 @@ namespace Engarde_Synthesis
 
         private static IMagicEffect CopyEffect(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, FormKey formKey)
         {
-            var record = state.LinkCache.Resolve<MagicEffect>(formKey);
+            var record = state.LinkCache.Resolve<IMagicEffectGetter>(formKey);
             IMagicEffect recordCopy = state.PatchMod.MagicEffects.GetOrAddAsOverride(record);
             return recordCopy;
         }
@@ -765,7 +765,7 @@ namespace Engarde_Synthesis
                             armorPenetration: WeaponArmorPenetration.Strong);
                         break;
                     case WeaponAnimationType.TwoHandAxe
-                        when weaponCopy.Keywords?.Contains(Skyrim.Keyword.WeapTypeWarhammer) ?? false:
+                        when weaponCopy.Keywords?.Contains(Skyrim.Keyword.WeapTypeBattleaxe) ?? false:
                     {
                         ChangeWeapon(weaponCopy, 16, reachMult: 0.8f, speedMult: 1.1f, staggerMult: 1.5f,
                             armorPenetration: WeaponArmorPenetration.Strong);
@@ -1491,12 +1491,14 @@ namespace Engarde_Synthesis
                 idleCopy.RelatedIdles[1] =
                     new FormLink<IIdleAnimationGetter>(Skyrim.IdleAnimation.DefaultSheathe);
             }
-            else if (_settings.Value.npcSettings.dragonTweaks)
+
+            if (_settings.Value.npcSettings.dragonTweaks)
             {
                 IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.DragonstaggerStart);
                 idleCopy.Conditions.Add(isStaggeringAttackCondition);
             }
-            else if (_settings.Value.npcSettings.dragonTweaks)
+
+            if (_settings.Value.npcSettings.dragonTweaks)
             {
                 IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.FlyStartTakeOff);
                 idleCopy.Conditions.Add(staminaPercentCondition);
@@ -1504,7 +1506,6 @@ namespace Engarde_Synthesis
                 idleCopy = CopyIdle(state, Skyrim.IdleAnimation.FlyStartTakeOffVertical);
                 idleCopy.Conditions.Add(staminaPercentCondition);
             }
-
 
             if (_settings.Value.basicAttacks.dwAttackTweaks)
             {
@@ -1526,7 +1527,7 @@ namespace Engarde_Synthesis
                     ParameterOneRecord = Skyrim.Npc.Player,
                 }
             };
-            if (!_settings.Value.powerAttacks.powerAttackTweaks)
+            if (_settings.Value.powerAttacks.powerAttackTweaks)
             {
                 List<IIdleAnimation> idlesToDisable = new()
                 {
@@ -1904,22 +1905,21 @@ namespace Engarde_Synthesis
                 AddKeyword(effectCopy, Engarde.Keyword.MCT_BlockableSpell);
                 effectCopy.TaperDuration = 0.5f; // effect with 0 duration won't have be able to get magnitude
                 effectCopy.VirtualMachineAdapter = fireScript;
-            }
 
-            else if (_settings.Value.npcSettings.dragonTweaks)
-            {
-                IMagicEffect effectCopy = CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFrostBreathEffect1);
+
+                effectCopy = CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFrostBreathEffect1);
                 effectCopy.ResistValue = ActorValue.None;
                 effectCopy.SecondActorValueWeight = 0.1f; // less stamina damage
                 effectCopy.VirtualMachineAdapter = frostScript;
-                
+
                 effectCopy = CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFrostIceStormEffect);
                 effectCopy.ResistValue = ActorValue.None;
                 effectCopy.SecondActorValueWeight = 0.1f; // less stamina damage
                 effectCopy.VirtualMachineAdapter = frostScript;
             }
 
-            else if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dragonborn.esm")))
+
+            if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dragonborn.esm")))
             {
                 IMagicEffect effectCopy = CopyEffect(state, Engarde.MagicEffect.MCT_DragonInjuryMouth);
                 ScriptObjectProperty property =
