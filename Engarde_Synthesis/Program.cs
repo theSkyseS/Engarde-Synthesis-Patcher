@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Synthesis;
+using Mutagen.Bethesda.FormKeys.SkyrimSE;
 using Mutagen.Bethesda.Skyrim;
 using System.Threading.Tasks;
 using Engarde_Synthesis.Settings;
