@@ -1949,6 +1949,223 @@ namespace Engarde_Synthesis
             PatchIdles(state);
             PatchDefensiveMoves(state);
             PatchEffects(state);
+
+            PatchSpells(state);
+        }
+
+        private static void PatchSpells(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            void TuneLFireDragonSpell(ISpell spell, Effect effect, int increment)
+            {
+                spell.Flags |= SpellDataFlag.IgnoreResistance;
+                for (int i = 0; i < 5; i++)
+                {
+                    spell.Effects[i].Data!.Magnitude = 20 + i * increment;
+                    spell.Effects[i].Data!.Duration = 0;
+                }
+                spell.Effects.Add(effect);
+            }
+
+            static ISpell CopySpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState, FormKey formKey)
+            {
+                ISpellGetter spell = patcherState.LinkCache.Resolve<ISpellGetter>(formKey);
+                ISpell spellCopy = patcherState.PatchMod.Spells.GetOrAddAsOverride(spell);
+                return spellCopy;
+            }
+
+            static void TuneDragonFireBreathSpells(ISpell spell, float magnitude)
+            {
+                spell.Flags |= SpellDataFlag.IgnoreResistance;
+                spell.Effects[0].Data ??= new EffectData();
+                spell.Effects[0].Data!.Magnitude = magnitude;
+                spell.Effects[0].Data!.Duration = 1;
+            }
+
+
+            var spellCopy = CopySpell(state, Engarde.ASpell.MCT_PowerAttackCoolDownSpell);
+            spellCopy.Effects[0].Data!.Duration = _settings.Value.powerAttacks.powerAttackCooldown;
+
+            spellCopy = CopySpell(state, Engarde.ASpell.MCT_NoStaminaRegenWhileRunning);
+            spellCopy.Effects[0].Data!.Duration = _settings.Value.staminaSettings.runningStaminaRatePenalty;
+
+            spellCopy = CopySpell(state, Engarde.ASpell.MCT_MeleeActorMonitorSpell);
+            if (_settings.Value.npcSettings.staminaManagement)
+            {
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_ActorBehaviorStaminaControl,
+                    Data = new EffectData()
+                    {
+                        Magnitude = 300,
+                        Area = 0,
+                        Duration = 2
+                    }
+                });
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_ActorBehaviorOutOfStaminaSpeed1,
+                    Data = new EffectData
+                    {
+                        Magnitude = 45,
+                        Area = 0,
+                        Duration = 2
+                    }
+                });
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_ActorBehaviorOutOfStaminaAttackSpeed1,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0.25f,
+                        Area = 0,
+                        Duration = 2
+                    }
+                });
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_ActorBehaviorOutOfStaminaSpeed2,
+                    Data = new EffectData
+                    {
+                        Magnitude = 25,
+                        Area = 0,
+                        Duration = 2
+                    }
+                });
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_ActorBehaviorOutOfStaminaAttackSpeed2,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0.15f,
+                        Area = 0,
+                        Duration = 2
+                    }
+                });
+            }
+
+            if (_settings.Value.npcSettings.npcDodging)
+            {
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_NPCCanDodge,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 1
+                    }
+                });
+            }
+
+            if (_settings.Value.defensiveActions.defensiveActions)
+            {
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_ActorVerticalAttacking,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 1
+                    }
+                });
+            }
+
+            if (_settings.Value.npcSettings.giantTweaks)
+            {
+                Effect staggerBig = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_StaggersPlayerFromGroundShake,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0.25f,
+                        Area = 14,
+                        Duration = 1
+                    }
+                };
+
+                Effect staggerSmall = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_StaggersPlayerFromGroundShake,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0.5f,
+                        Area = 7,
+                        Duration = 1
+                    }
+                };
+                spellCopy = CopySpell(state, Skyrim.ASpell.crGiantClubSlam);
+                spellCopy.Effects.RemoveAll(x =>
+                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantSlam);
+
+                spellCopy.Effects.Add(staggerSmall);
+                spellCopy.Effects.Add(staggerBig);
+
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_KnockDown,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 0
+                    }
+                });
+
+                spellCopy = CopySpell(state, Skyrim.ASpell.crGiantStomp);
+                spellCopy.Effects.RemoveAll(x =>
+                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantSlam);
+                spellCopy.Effects.Add(staggerBig);
+                spellCopy.Effects.Add(staggerSmall);
+
+
+                spellCopy = CopySpell(state, Skyrim.ASpell.crGiantMagicResistance);
+                spellCopy.Effects[0].Data!.Magnitude = 66;
+            }
+
+            if (_settings.Value.npcSettings.dragonTweaks)
+            {
+                Effect staggerEffect4 = new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_StaggersPlayer4,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 1
+                    }
+                };
+                spellCopy = CopySpell(state, Skyrim.ASpell.L_VoiceDragonFire01);
+                TuneLFireDragonSpell(spellCopy, staggerEffect4, 5);
+                spellCopy = CopySpell(state, Skyrim.ASpell.L_VoiceDragonFireBall01);
+                TuneLFireDragonSpell(spellCopy, staggerEffect4, 10);
+
+                List<ISpell> fireShouts = new()
+                {
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFire01),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFire02),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFire03),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFire04),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFire05),
+                    CopySpell(state, Dragonborn.ASpell.DLC2VoiceDragonFire06),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFireBall01),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFireBall02),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFireBall03),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFireBall04),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFireBall05),
+                    CopySpell(state, Dragonborn.ASpell.DLC2VoiceDragonFireBall06)
+                };
+
+                for (int i = 0; i < 6; i++)
+                {
+                    TuneDragonFireBreathSpells(fireShouts[i], 20 + 5 * i);
+                }
+
+                for (int i = 0; i < 6; i++)
+                {
+                    TuneDragonFireBreathSpells(fireShouts[i + 6], 20 + 10 * i);
+                }
+            }
         }
     }
 }
