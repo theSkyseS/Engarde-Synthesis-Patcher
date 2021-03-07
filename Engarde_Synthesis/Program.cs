@@ -633,13 +633,6 @@ namespace Engarde_Synthesis
             return idleCopy;
         }
 
-        private static IMagicEffect CopyEffect(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, FormKey formKey)
-        {
-            var record = state.LinkCache.Resolve<IMagicEffectGetter>(formKey);
-            IMagicEffect recordCopy = state.PatchMod.MagicEffects.GetOrAddAsOverride(record);
-            return recordCopy;
-        }
-
         #endregion
 
         #region Patcher Methods
@@ -1849,6 +1842,13 @@ namespace Engarde_Synthesis
 
         private static void PatchEffects(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
+            static IMagicEffect CopyEffect(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, FormKey formKey)
+            {
+                var record = state.LinkCache.Resolve<IMagicEffectGetter>(formKey);
+                IMagicEffect recordCopy = state.PatchMod.MagicEffects.GetOrAddAsOverride(record);
+                return recordCopy;
+            }
+
             VirtualMachineAdapter fireScript = new()
             {
                 ObjectFormat = (ushort) 2,
@@ -1923,12 +1923,12 @@ namespace Engarde_Synthesis
             {
                 IMagicEffect effectCopy = CopyEffect(state, Engarde.MagicEffect.MCT_DragonInjuryMouth);
                 ScriptObjectProperty property =
-                    (ScriptObjectProperty) effectCopy.VirtualMachineAdapter!.Scripts[1].Properties[7];
+                    (ScriptObjectProperty) effectCopy.VirtualMachineAdapter!.Scripts[0].Properties[7];
                 property.Object = Dragonborn.ASpell.DLC2DragonFireBreathShout06;
-                effectCopy.VirtualMachineAdapter!.Scripts[1].Properties[7] = property;
-                property = (ScriptObjectProperty) effectCopy.VirtualMachineAdapter!.Scripts[1].Properties[8];
+                effectCopy.VirtualMachineAdapter!.Scripts[0].Properties[7] = property;
+                property = (ScriptObjectProperty) effectCopy.VirtualMachineAdapter!.Scripts[0].Properties[8];
                 property.Object = Dragonborn.ASpell.DLC2DragonFrostBreathShout06;
-                effectCopy.VirtualMachineAdapter!.Scripts[1].Properties[8] = property;
+                effectCopy.VirtualMachineAdapter!.Scripts[0].Properties[8] = property;
             }
         }
 
@@ -1955,17 +1955,6 @@ namespace Engarde_Synthesis
 
         private static void PatchSpells(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            void TuneLFireDragonSpell(ISpell spell, Effect effect, int increment)
-            {
-                spell.Flags |= SpellDataFlag.IgnoreResistance;
-                for (int i = 0; i < 5; i++)
-                {
-                    spell.Effects[i].Data!.Magnitude = 20 + i * increment;
-                    spell.Effects[i].Data!.Duration = 0;
-                }
-                spell.Effects.Add(effect);
-            }
-
             static ISpell CopySpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState, FormKey formKey)
             {
                 ISpellGetter spell = patcherState.LinkCache.Resolve<ISpellGetter>(formKey);
@@ -1973,12 +1962,22 @@ namespace Engarde_Synthesis
                 return spellCopy;
             }
 
-            static void TuneDragonFireBreathSpells(ISpell spell, float magnitude)
+            void TuneLDragonSpell(ISpell spell, int increment, int duration)
+            {
+                spell.Flags |= SpellDataFlag.IgnoreResistance;
+                for (int i = 0; i < 5; i++)
+                {
+                    spell.Effects[i].Data!.Magnitude = 20 + i * increment;
+                    spell.Effects[i].Data!.Duration = duration;
+                }
+            }
+
+            static void TuneDragonBreathSpells(ISpell spell, float magnitude, int duration)
             {
                 spell.Flags |= SpellDataFlag.IgnoreResistance;
                 spell.Effects[0].Data ??= new EffectData();
                 spell.Effects[0].Data!.Magnitude = magnitude;
-                spell.Effects[0].Data!.Duration = 1;
+                spell.Effects[0].Data!.Duration = duration;
             }
 
 
@@ -1994,7 +1993,7 @@ namespace Engarde_Synthesis
                 spellCopy.Effects.Add(new Effect
                 {
                     BaseEffect = Engarde.MagicEffect.MCT_ActorBehaviorStaminaControl,
-                    Data = new EffectData()
+                    Data = new EffectData
                     {
                         Magnitude = 300,
                         Area = 0,
@@ -2136,11 +2135,22 @@ namespace Engarde_Synthesis
                     }
                 };
                 spellCopy = CopySpell(state, Skyrim.ASpell.L_VoiceDragonFire01);
-                TuneLFireDragonSpell(spellCopy, staggerEffect4, 5);
-                spellCopy = CopySpell(state, Skyrim.ASpell.L_VoiceDragonFireBall01);
-                TuneLFireDragonSpell(spellCopy, staggerEffect4, 10);
+                TuneLDragonSpell(spellCopy, 5, 1);
+                spellCopy.Effects.Add(staggerEffect4);
 
-                List<ISpell> fireShouts = new()
+                spellCopy = CopySpell(state, Skyrim.ASpell.L_VoiceDragonFireBall01);
+                TuneLDragonSpell(spellCopy, 10, 0);
+                spellCopy.Effects.Add(staggerEffect4);
+
+                spellCopy = CopySpell(state, Skyrim.ASpell.L_VoiceDragonFrost01);
+                TuneLDragonSpell(spellCopy, 10, 1);
+                spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
+
+                spellCopy = CopySpell(state, Skyrim.ASpell.L_VoiceDragonFrostBall01);
+                TuneLDragonSpell(spellCopy, 10, 1);
+                spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
+
+                List<ISpell> dragonShouts = new()
                 {
                     CopySpell(state, Skyrim.ASpell.VoiceDragonFire01),
                     CopySpell(state, Skyrim.ASpell.VoiceDragonFire02),
@@ -2153,19 +2163,49 @@ namespace Engarde_Synthesis
                     CopySpell(state, Skyrim.ASpell.VoiceDragonFireBall03),
                     CopySpell(state, Skyrim.ASpell.VoiceDragonFireBall04),
                     CopySpell(state, Skyrim.ASpell.VoiceDragonFireBall05),
-                    CopySpell(state, Dragonborn.ASpell.DLC2VoiceDragonFireBall06)
+                    CopySpell(state, Dragonborn.ASpell.DLC2VoiceDragonFireBall06),
+
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFrost01),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFrost02),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFrost03),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFrost04),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFrost05),
+                    CopySpell(state, Dragonborn.ASpell.DLC2VoiceDragonFrost06),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFrostBall01),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFrostBall02),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFrostBall03),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFrostBall04),
+                    CopySpell(state, Skyrim.ASpell.VoiceDragonFrostBall05),
+                    CopySpell(state, Dragonborn.ASpell.DLC2VoiceDragonFrostBall06),
                 };
 
                 for (int i = 0; i < 6; i++)
                 {
-                    TuneDragonFireBreathSpells(fireShouts[i], 20 + 5 * i);
+                    TuneDragonBreathSpells(dragonShouts[i], 20 + 5 * i, 1);
+                    dragonShouts[i].Effects.Add(staggerEffect4);
                 }
 
                 for (int i = 0; i < 6; i++)
                 {
-                    TuneDragonFireBreathSpells(fireShouts[i + 6], 20 + 10 * i);
+                    TuneDragonBreathSpells(dragonShouts[i + 6], 20 + 10 * i, 0);
+                    dragonShouts[i].Effects.Add(staggerEffect4);
+                }
+
+                for (int i = 0; i < 6; i++)
+                {
+                    TuneDragonBreathSpells(dragonShouts[i + 12], 20 + 10 * i, 1);
+                    dragonShouts[i + 12].Effects
+                        .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
+                }
+
+                for (int i = 0; i < 6; i++)
+                {
+                    TuneDragonBreathSpells(dragonShouts[i + 18], 20 + 10 * i, 0);
+                    dragonShouts[i + 18].Effects
+                        .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
                 }
             }
+            
         }
     }
 }
