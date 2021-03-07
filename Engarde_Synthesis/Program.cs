@@ -1999,6 +1999,7 @@ namespace Engarde_Synthesis
                 spell.Effects.Add(staggerEffect3);
                 spell.Effects.Add(staggerEffect4);
             }
+
             static void AddPowerStaggerEffects(ISpell spell)
             {
                 EffectData staggerEffectData = new()
@@ -2331,14 +2332,14 @@ namespace Engarde_Synthesis
                     CopySpell(state, Skyrim.ASpell.crSpider02PoisonBite),
                     CopySpell(state, Skyrim.ASpell.crSpider03PoisonBite),
                     CopySpell(state, Skyrim.ASpell.crSpider01PoisonBite),
-                    
+
                     CopySpell(state, Skyrim.ASpell.DiseaseAtaxia),
                     CopySpell(state, Skyrim.ASpell.DiseaseBoneBreakFever),
                     CopySpell(state, Skyrim.ASpell.DiseaseBrainRot),
                     CopySpell(state, Skyrim.ASpell.DiseaseRattles),
                     CopySpell(state, Skyrim.ASpell.DiseaseRockjoint),
                     CopySpell(state, Skyrim.ASpell.DiseaseWitbane),
-                    
+
                     CopySpell(state, Skyrim.ASpell.crFalmerPoisonedWeapon01),
                     CopySpell(state, Skyrim.ASpell.crFalmerPoisonedWeapon02),
                     CopySpell(state, Skyrim.ASpell.crFalmerPoisonedWeapon03),
@@ -2364,7 +2365,7 @@ namespace Engarde_Synthesis
                 if (_settings.Value.npcSettings.werewolfTweaks)
                 {
                     spellCopy = CopySpell(state, Skyrim.ASpell.AbWerewolf);
-                    
+
                     if (!containsGrowl)
                     {
                         spellCopy.Effects[1].Data!.Magnitude = 300;
@@ -2382,34 +2383,34 @@ namespace Engarde_Synthesis
                         }
                     });
 
-                    spellCopy = CopySpell(state, Dragonborn.ASpell.DLC2AbWerebear);
-                    
-                    if (!containsGrowl)
+                    if (containsGrowl)
                     {
+                        spellCopy = CopySpell(state, Dragonborn.ASpell.DLC2AbWerebear);
+                        
                         spellCopy.Effects[1].Data!.Magnitude = 300;
                         spellCopy.Effects[2].Data!.Magnitude = 400;
+
+                        spellCopy.Effects.Add(new Effect
+                        {
+                            BaseEffect = Engarde.MagicEffect.MCT_WeaponSpeedPenalty,
+                            Data = new EffectData
+                            {
+                                Magnitude = 0.3f,
+                                Area = 0,
+                                Duration = 0
+                            }
+                        });
+                        spellCopy.Effects.Add(new Effect
+                        {
+                            BaseEffect = Engarde.MagicEffect.MCT_MoveSpeedPenalty,
+                            Data = new EffectData
+                            {
+                                Magnitude = 30,
+                                Area = 0,
+                                Duration = 0
+                            }
+                        });
                     }
-                    
-                    spellCopy.Effects.Add(new Effect
-                    {
-                        BaseEffect = Engarde.MagicEffect.MCT_WeaponSpeedPenalty,
-                        Data = new EffectData
-                        {
-                            Magnitude = 0.3f,
-                            Area = 0,
-                            Duration = 0
-                        }
-                    });
-                    spellCopy.Effects.Add(new Effect
-                    {
-                        BaseEffect = Engarde.MagicEffect.MCT_MoveSpeedPenalty,
-                        Data = new EffectData
-                        {
-                            Magnitude = 30,
-                            Area = 0,
-                            Duration = 0
-                        }
-                    });
 
                     spellCopy = CopySpell(state, Skyrim.ASpell.WerewolfFeed);
                     spellCopy.Effects.Add(new Effect
@@ -2439,7 +2440,7 @@ namespace Engarde_Synthesis
                     {
                         werewolfHowlSpells.Add(CopySpell(state, Growl.ASpell.HRI_Howl_Spell_RevertForm));
                     }
-                    
+
                     werewolfHowlSpells.ForEach(spell =>
                     {
                         spell.Effects.Add(new Effect
