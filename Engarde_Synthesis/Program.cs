@@ -1931,28 +1931,7 @@ namespace Engarde_Synthesis
                 effectCopy.VirtualMachineAdapter!.Scripts[0].Properties[8] = property;
             }
         }
-
-        #endregion
-
-        public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
-        {
-            PatchGlobals(state);
-            PatchArmors(state);
-            PatchWeapons(state);
-            PatchRaces(state);
-            PatchNpcs(state);
-            PatchAttacks(state);
-            PatchPowerAttacks(state);
-            PatchDodges(state);
-            PatchWerewolves(state);
-            PatchKillmoves(state);
-            PatchIdles(state);
-            PatchDefensiveMoves(state);
-            PatchEffects(state);
-
-            PatchSpells(state);
-        }
-
+        
         private static void PatchSpells(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             static void AddStaggerEffects(ISpell spell)
@@ -2296,12 +2275,11 @@ namespace Engarde_Synthesis
                 }
             }
 
-            List<ISpell> savageSkyrimSpells = new();
             if (_settings.Value.staggerSettings.weaponStagger)
             {
                 if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Savage Skyrim Std.esp")))
                 {
-                    savageSkyrimSpells = new List<ISpell>
+                    List<ISpell> savageSkyrimSpells = new List<ISpell>
                     {
                         CopySpell(state, SavageSkyrim.ASpell.__AA_Animal_ForceStagger),
                         CopySpell(state, SavageSkyrim.ASpell.__AB_Animal_PRED_BleedAttack_Bear),
@@ -2456,6 +2434,27 @@ namespace Engarde_Synthesis
                     });
                 }
             }
+        }
+
+        #endregion
+
+        public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            PatchGlobals(state);
+            PatchArmors(state);
+            PatchWeapons(state);
+            PatchRaces(state);
+            PatchNpcs(state);
+            PatchAttacks(state);
+            PatchPowerAttacks(state);
+            PatchDodges(state);
+            PatchWerewolves(state);
+            PatchKillmoves(state);
+            PatchIdles(state);
+            PatchDefensiveMoves(state);
+            PatchEffects(state);
+            PatchSpells(state);
+            
         }
     }
 }
