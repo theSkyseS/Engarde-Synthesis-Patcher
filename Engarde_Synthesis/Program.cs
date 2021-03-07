@@ -1918,7 +1918,6 @@ namespace Engarde_Synthesis
                 effectCopy.VirtualMachineAdapter = frostScript;
             }
 
-
             if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dragonborn.esm")))
             {
                 IMagicEffect effectCopy = CopyEffect(state, Engarde.MagicEffect.MCT_DragonInjuryMouth);
@@ -2455,6 +2454,25 @@ namespace Engarde_Synthesis
             PatchEffects(state);
             PatchSpells(state);
             
+        }
+
+        #endregion
+
+        public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            PatchGlobals(state);
+            PatchArmors(state);
+            PatchWeapons(state);
+            PatchRaces(state);
+            PatchNpcs(state);
+            PatchAttacks(state);
+            PatchPowerAttacks(state);
+            PatchDodges(state);
+            PatchWerewolves(state);
+            PatchKillmoves(state);
+            PatchIdles(state);
+            PatchDefensiveMoves(state);
+            PatchEffects(state);
         }
     }
 }
