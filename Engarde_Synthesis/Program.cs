@@ -1955,6 +1955,95 @@ namespace Engarde_Synthesis
 
         private static void PatchSpells(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
+            static void AddStaggerEffects(ISpell spell)
+            {
+                EffectData staggerEffectData = new()
+                {
+                    Magnitude = 0,
+                    Area = 0,
+                    Duration = 1
+                };
+                Effect staggerEffect1 = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_StaggersPlayer1,
+                    Data = staggerEffectData
+                };
+                Effect staggerEffect2 = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_StaggersPlayer2,
+                    Data = staggerEffectData
+                };
+                Effect staggerEffect3 = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_StaggersPlayer3,
+                    Data = staggerEffectData
+                };
+                Effect staggerEffect4 = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_StaggersPlayer4,
+                    Data = staggerEffectData
+                };
+                Effect knockEffect = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_KnockdownAirTarget,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 2
+                    }
+                };
+                spell.Effects.Add(knockEffect);
+                spell.Effects.Add(staggerEffect1);
+                spell.Effects.Add(staggerEffect2);
+                spell.Effects.Add(staggerEffect3);
+                spell.Effects.Add(staggerEffect4);
+            }
+            static void AddPowerStaggerEffects(ISpell spell)
+            {
+                EffectData staggerEffectData = new()
+                {
+                    Magnitude = 0,
+                    Area = 0,
+                    Duration = 1
+                };
+                Effect staggerEffect1 = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_PowerStaggersPlayer1,
+                    Data = staggerEffectData
+                };
+                Effect staggerEffect2 = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_PowerStaggersPlayer2,
+                    Data = staggerEffectData
+                };
+                Effect staggerEffect3 = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_PowerStaggersPlayer3,
+                    Data = staggerEffectData
+                };
+                Effect staggerEffect4 = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_PowerStaggersPlayer4,
+                    Data = staggerEffectData
+                };
+                Effect knockEffect = new()
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_KnockdownAirTarget,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 2
+                    }
+                };
+                spell.Effects.Add(knockEffect);
+                spell.Effects.Add(staggerEffect1);
+                spell.Effects.Add(staggerEffect2);
+                spell.Effects.Add(staggerEffect3);
+                spell.Effects.Add(staggerEffect4);
+            }
+
             static ISpell CopySpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState, FormKey formKey)
             {
                 ISpellGetter spell = patcherState.LinkCache.Resolve<ISpellGetter>(formKey);
@@ -1962,7 +2051,7 @@ namespace Engarde_Synthesis
                 return spellCopy;
             }
 
-            void TuneLDragonSpell(ISpell spell, int increment, int duration)
+            static void TuneLDragonSpell(ISpell spell, int increment, int duration)
             {
                 spell.Flags |= SpellDataFlag.IgnoreResistance;
                 for (int i = 0; i < 5; i++)
@@ -2204,8 +2293,167 @@ namespace Engarde_Synthesis
                     dragonShouts[i + 18].Effects
                         .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
                 }
-                
-                
+            }
+
+            List<ISpell> savageSkyrimSpells = new();
+            if (_settings.Value.staggerSettings.weaponStagger)
+            {
+                if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Savage Skyrim Std.esp")))
+                {
+                    savageSkyrimSpells = new List<ISpell>
+                    {
+                        CopySpell(state, SavageSkyrim.ASpell.__AA_Animal_ForceStagger),
+                        CopySpell(state, SavageSkyrim.ASpell.__AB_Animal_PRED_BleedAttack_Bear),
+                        CopySpell(state, SavageSkyrim.ASpell.__AB_Animal_PRED_BleedAttack_Skeever),
+                        CopySpell(state, SavageSkyrim.ASpell.__AB_Animal_PRED_BleedAttack_SabreCat),
+                        CopySpell(state, SavageSkyrim.ASpell.__AB_Animal_PRED_BleedAttack_Wolf)
+                    };
+                    savageSkyrimSpells.ForEach(x =>
+                        x.Effects.RemoveAll(effect =>
+                            effect.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_Stagger));
+                    ISpell powerStaggerSpell = CopySpell(state, SavageSkyrim.ASpell.__AA_Animal_ForceThrow_Small);
+                    powerStaggerSpell.Effects.RemoveAll(x =>
+                        x.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_ForceThrow_2);
+                    AddPowerStaggerEffects(powerStaggerSpell);
+                }
+
+                List<ISpell> staggeringAttackSpells = new()
+                {
+                    CopySpell(state, Skyrim.ASpell.AAAFrostTouch),
+                    CopySpell(state, Skyrim.ASpell.SilentMoonsEnchantSpell),
+                    CopySpell(state, Skyrim.ASpell.crAtronachFlameMeleeAttack),
+                    CopySpell(state, Skyrim.ASpell.crAtronachFlameMeleePowerAttack),
+                    CopySpell(state, Skyrim.ASpell.crAtronachStormMeleeAttack),
+                    CopySpell(state, Skyrim.ASpell.crAtronachFrostMeleeAttack),
+                    CopySpell(state, Skyrim.ASpell.crChaurusPoisonBite01),
+                    CopySpell(state, Skyrim.ASpell.crChaurusPoisonBite02),
+                    CopySpell(state, Dawnguard.ASpell.DLC1crChaurusPoisonBite03),
+                    CopySpell(state, Skyrim.ASpell.crSpider02PoisonBite),
+                    CopySpell(state, Skyrim.ASpell.crSpider03PoisonBite),
+                    CopySpell(state, Skyrim.ASpell.crSpider01PoisonBite),
+                    
+                    CopySpell(state, Skyrim.ASpell.DiseaseAtaxia),
+                    CopySpell(state, Skyrim.ASpell.DiseaseBoneBreakFever),
+                    CopySpell(state, Skyrim.ASpell.DiseaseBrainRot),
+                    CopySpell(state, Skyrim.ASpell.DiseaseRattles),
+                    CopySpell(state, Skyrim.ASpell.DiseaseRockjoint),
+                    CopySpell(state, Skyrim.ASpell.DiseaseWitbane),
+                    
+                    CopySpell(state, Skyrim.ASpell.crFalmerPoisonedWeapon01),
+                    CopySpell(state, Skyrim.ASpell.crFalmerPoisonedWeapon02),
+                    CopySpell(state, Skyrim.ASpell.crFalmerPoisonedWeapon03),
+                    CopySpell(state, Skyrim.ASpell.crFalmerPoisonedWeapon04),
+                    CopySpell(state, Skyrim.ASpell.crFalmerPoisonedWeapon05),
+                    CopySpell(state, Dawnguard.ASpell.DLC1crGargoyleSmallAbsorbHealth),
+                    CopySpell(state, Dawnguard.ASpell.DLC1crGargoyleAbsorbHealth),
+                    CopySpell(state, Dawnguard.ASpell.DLC1VampirePoisonTalons),
+                    CopySpell(state, Dawnguard.ASpell.DLC1crDeathHoundMeleeAttack),
+                    CopySpell(state, Dragonborn.ASpell.DLC2crAshGuadianMeleeAttack),
+                    CopySpell(state, Dragonborn.ASpell.DLC2DiseaseDroops),
+                    CopySpell(state, Dragonborn.ASpell.DLC2ExpSpiderAlbinoPoisonBite),
+                    CopySpell(state, Dragonborn.ASpell.DLC2crFireWyrmMeleeAttack)
+                };
+                staggeringAttackSpells.ForEach(AddStaggerEffects);
+                bool containsGrowl =
+                    state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp"));
+                if (containsGrowl)
+                {
+                    AddStaggerEffects(CopySpell(state, Growl.ASpell.HRI_Werewolf_Spell_Attack));
+                }
+
+                if (_settings.Value.npcSettings.werewolfTweaks)
+                {
+                    spellCopy = CopySpell(state, Skyrim.ASpell.AbWerewolf);
+                    
+                    if (!containsGrowl)
+                    {
+                        spellCopy.Effects[1].Data!.Magnitude = 300;
+                        spellCopy.Effects[2].Data!.Magnitude = 200;
+                    }
+
+                    spellCopy.Effects.Add(new Effect
+                    {
+                        BaseEffect = Engarde.MagicEffect.MCT_WeaponSpeedPenalty,
+                        Data = new EffectData
+                        {
+                            Magnitude = 0.2f,
+                            Area = 0,
+                            Duration = 0
+                        }
+                    });
+
+                    spellCopy = CopySpell(state, Dragonborn.ASpell.DLC2AbWerebear);
+                    
+                    if (!containsGrowl)
+                    {
+                        spellCopy.Effects[1].Data!.Magnitude = 300;
+                        spellCopy.Effects[2].Data!.Magnitude = 400;
+                    }
+                    
+                    spellCopy.Effects.Add(new Effect
+                    {
+                        BaseEffect = Engarde.MagicEffect.MCT_WeaponSpeedPenalty,
+                        Data = new EffectData
+                        {
+                            Magnitude = 0.3f,
+                            Area = 0,
+                            Duration = 0
+                        }
+                    });
+                    spellCopy.Effects.Add(new Effect
+                    {
+                        BaseEffect = Engarde.MagicEffect.MCT_MoveSpeedPenalty,
+                        Data = new EffectData
+                        {
+                            Magnitude = 30,
+                            Area = 0,
+                            Duration = 0
+                        }
+                    });
+
+                    spellCopy = CopySpell(state, Skyrim.ASpell.WerewolfFeed);
+                    spellCopy.Effects.Add(new Effect
+                    {
+                        BaseEffect = Engarde.MagicEffect.MCT_BeastFeed,
+                        Data = new EffectData
+                        {
+                            Magnitude = 100,
+                            Area = 0,
+                            Duration = 0
+                        }
+                    });
+
+                    List<ISpell> werewolfHowlSpells = new()
+                    {
+                        CopySpell(state, Skyrim.ASpell.HowlWerewolfFear1),
+                        CopySpell(state, Skyrim.ASpell.HowlWerewolfFear2),
+                        CopySpell(state, Skyrim.ASpell.HowlWerewolfFear3),
+                        CopySpell(state, Skyrim.ASpell.HowlWerewolfDetectLife1),
+                        CopySpell(state, Skyrim.ASpell.HowlWerewolfDetectLife2),
+                        CopySpell(state, Skyrim.ASpell.HowlWerewolfDetectLife3),
+                        CopySpell(state, Skyrim.ASpell.HowlWerewolfSummonWolves1),
+                        CopySpell(state, Skyrim.ASpell.HowlWerewolfSummonWolves2),
+                        CopySpell(state, Skyrim.ASpell.HowlWerewolfSummonWolves3)
+                    };
+                    if (containsGrowl)
+                    {
+                        werewolfHowlSpells.Add(CopySpell(state, Growl.ASpell.HRI_Howl_Spell_RevertForm));
+                    }
+                    
+                    werewolfHowlSpells.ForEach(spell =>
+                    {
+                        spell.Effects.Add(new Effect
+                        {
+                            BaseEffect = Engarde.MagicEffect.MCT_WerewolfHowl,
+                            Data = new EffectData
+                            {
+                                Magnitude = 0,
+                                Area = 0,
+                                Duration = 0
+                            }
+                        });
+                    });
+                }
             }
         }
     }
