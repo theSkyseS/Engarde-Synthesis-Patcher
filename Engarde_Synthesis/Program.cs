@@ -2455,24 +2455,5 @@ namespace Engarde_Synthesis
             PatchSpells(state);
             
         }
-
-        #endregion
-
-        public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
-        {
-            PatchGlobals(state);
-            PatchArmors(state);
-            PatchWeapons(state);
-            PatchRaces(state);
-            PatchNpcs(state);
-            PatchAttacks(state);
-            PatchPowerAttacks(state);
-            PatchDodges(state);
-            PatchWerewolves(state);
-            PatchKillmoves(state);
-            PatchIdles(state);
-            PatchDefensiveMoves(state);
-            PatchEffects(state);
-        }
     }
 }
