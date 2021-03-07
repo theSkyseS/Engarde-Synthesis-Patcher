@@ -1985,7 +1985,7 @@ namespace Engarde_Synthesis
             spellCopy.Effects[0].Data!.Duration = _settings.Value.powerAttacks.powerAttackCooldown;
 
             spellCopy = CopySpell(state, Engarde.ASpell.MCT_NoStaminaRegenWhileRunning);
-            spellCopy.Effects[0].Data!.Duration = _settings.Value.staminaSettings.runningStaminaRatePenalty;
+            spellCopy.Effects[0].Data!.Magnitude = _settings.Value.staminaSettings.runningStaminaRatePenalty;
 
             spellCopy = CopySpell(state, Engarde.ASpell.MCT_MeleeActorMonitorSpell);
             if (_settings.Value.npcSettings.staminaManagement)
@@ -2113,9 +2113,9 @@ namespace Engarde_Synthesis
 
                 spellCopy = CopySpell(state, Skyrim.ASpell.crGiantStomp);
                 spellCopy.Effects.RemoveAll(x =>
-                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantSlam);
-                spellCopy.Effects.Add(staggerBig);
+                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantStomp);
                 spellCopy.Effects.Add(staggerSmall);
+                spellCopy.Effects.Add(staggerBig);
 
 
                 spellCopy = CopySpell(state, Skyrim.ASpell.crGiantMagicResistance);
@@ -2124,7 +2124,7 @@ namespace Engarde_Synthesis
 
             if (_settings.Value.npcSettings.dragonTweaks)
             {
-                Effect staggerEffect4 = new Effect
+                Effect staggerEffect4 = new()
                 {
                     BaseEffect = Engarde.MagicEffect.MCT_StaggersPlayer4,
                     Data = new EffectData
@@ -2188,7 +2188,7 @@ namespace Engarde_Synthesis
                 for (int i = 0; i < 6; i++)
                 {
                     TuneDragonBreathSpells(dragonShouts[i + 6], 20 + 10 * i, 0);
-                    dragonShouts[i].Effects.Add(staggerEffect4);
+                    dragonShouts[i + 6].Effects.Add(staggerEffect4);
                 }
 
                 for (int i = 0; i < 6; i++)
@@ -2204,8 +2204,9 @@ namespace Engarde_Synthesis
                     dragonShouts[i + 18].Effects
                         .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
                 }
+                
+                
             }
-            
         }
     }
 }
