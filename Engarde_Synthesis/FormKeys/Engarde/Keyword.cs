@@ -48,6 +48,9 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
             public static FormKey MCT_PaddedKW => ModKey.MakeFormKey(0x28fd);
             public static FormKey MCT_DefensiveAttack => ModKey.MakeFormKey(0x2936a2);
             public static FormKey MCT_SweepAttack => ModKey.MakeFormKey(0x294169);
+            public static FormKey MCT_KnockDownImmune => ModKey.MakeFormKey(0x2961c9);
+            public static FormKey MCT_NoStamina => ModKey.MakeFormKey(0x2961ca);
+            public static FormKey MCT_DamagesStamina => ModKey.MakeFormKey(0x29672e);
         }
     }
 }

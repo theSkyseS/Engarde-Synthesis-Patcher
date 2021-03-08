@@ -10,10 +10,10 @@ namespace Engarde_Synthesis.Settings
         public bool staminaManagement { get; set; } = true;
         [SynthesisSettingName("NPC dodging")]
         public bool npcDodging { get; set; } = true;
+        [SynthesisSettingName("First normal attack in a combo have windup")]
+        public bool npcAttackWindup { get; set; } = false;
         [SynthesisSettingName("Turning acceleration multiplier, higher makes npc react slower")]
         public int angularAccelerationMult { get; set; } = 7;
-        [SynthesisSettingName("Unarmed / Creature physical attack reach multiplier, smaller for shorter")]
-        public float unarmedReachMult { get; set; } = 0.8f;
         [SynthesisSettingName("Unarmed / Creature physical attack damage multiplier")]
         public float unarmedDamageMult { get; set; } = 2f;
         [SynthesisSettingName("Adds bonus armor to armored looking creatures")]

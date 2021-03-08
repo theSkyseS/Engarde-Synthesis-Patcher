@@ -5,16 +5,18 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
         public static class IdleAnimation
         {
             private readonly static ModKey ModKey = ModKey.FromNameAndExtension("Engarde.esp");
+            public static FormKey OutOfStamina => ModKey.MakeFormKey(0x2abdb);
+            public static FormKey MCTPowerAttack => ModKey.MakeFormKey(0x263956);
+            public static FormKey MCTPowerAttackLeftHandRoot => ModKey.MakeFormKey(0x263957);
+            public static FormKey MCTPowerAttackLeftHandRight => ModKey.MakeFormKey(0x26395a);
+            public static FormKey MCTPowerAttackLeftHandLeft => ModKey.MakeFormKey(0x26395b);
+            public static FormKey MCTPowerAttackRightHandRoot => ModKey.MakeFormKey(0x26395c);
             public static FormKey MCTPowerAttackRightHandForward => ModKey.MakeFormKey(0x26395d);
             public static FormKey MCTPowerBashRoot => ModKey.MakeFormKey(0x26395e);
             public static FormKey MCTPowerAttackDual => ModKey.MakeFormKey(0x263ec2);
-            public static FormKey MCTPowerAttackRightHandSprint2hm => ModKey.MakeFormKey(0x264988);
-            public static FormKey MCTPowerAttackRightHandSprintIntro => ModKey.MakeFormKey(0x264989);
-            public static FormKey MCTPowerAttackRightHandSprint2hw => ModKey.MakeFormKey(0x26498a);
+            public static FormKey MCTPowerAttackSprintRightHand => ModKey.MakeFormKey(0x264989);
             public static FormKey MCTPowerAttackSprintRoot => ModKey.MakeFormKey(0x26498b);
-            public static FormKey MCTPowerAttackRightHandSprint1hm => ModKey.MakeFormKey(0x26498c);
-            public static FormKey MCTPowerAttackLeftHandSprintIntro => ModKey.MakeFormKey(0x264990);
-            public static FormKey MCTPowerAttackLeftHandSprint => ModKey.MakeFormKey(0x264991);
+            public static FormKey MCTPowerAttackSprintLeftHand => ModKey.MakeFormKey(0x264990);
             public static FormKey MCTPowerAttackRightHandRight => ModKey.MakeFormKey(0x264992);
             public static FormKey MCTPowerAttackRightHandLeft => ModKey.MakeFormKey(0x264993);
             public static FormKey MCTPowerAttackRightHandBackward => ModKey.MakeFormKey(0x264994);
@@ -63,12 +65,12 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
             public static FormKey MCTPowerAttackForwardBeast => ModKey.MakeFormKey(0x29369f);
             public static FormKey MCTPowerAttackStandingBeast => ModKey.MakeFormKey(0x2936a0);
             public static FormKey MCTPowerAttackBackwardBeast => ModKey.MakeFormKey(0x2936a1);
-            public static FormKey OutOfStamina => ModKey.MakeFormKey(0x2abdb);
-            public static FormKey MCTPowerAttack => ModKey.MakeFormKey(0x263956);
-            public static FormKey MCTPowerAttackLeftHandRoot => ModKey.MakeFormKey(0x263957);
-            public static FormKey MCTPowerAttackLeftHandRight => ModKey.MakeFormKey(0x26395a);
-            public static FormKey MCTPowerAttackLeftHandLeft => ModKey.MakeFormKey(0x26395b);
-            public static FormKey MCTPowerAttackRightHandRoot => ModKey.MakeFormKey(0x26395c);
+            public static FormKey PlayerStaggerSink => ModKey.MakeFormKey(0x2971f4);
+            public static FormKey MCTPowerAttackSprint2hw => ModKey.MakeFormKey(0x297757);
+            public static FormKey MCTPowerAttackSprint2hm => ModKey.MakeFormKey(0x297758);
+            public static FormKey MCTPowerAttackH2HRoot => ModKey.MakeFormKey(0x298782);
+            public static FormKey MCTPowerAttackH2HRight => ModKey.MakeFormKey(0x298783);
+            public static FormKey MCTPowerAttackH2HLeft => ModKey.MakeFormKey(0x298784);
         }
     }
 }
