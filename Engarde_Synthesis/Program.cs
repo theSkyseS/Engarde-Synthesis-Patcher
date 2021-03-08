@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
@@ -10,12 +11,14 @@ using Noggog;
 
 namespace Engarde_Synthesis
 {
-    public class Program
+    public static class Program
     {
         #region Statics
 
         private static Lazy<Settings.Settings> _settings = null!;
         private static bool _foundAnotherSneakRootChild;
+        private static List<FormKey> _weaponSpeedEffects = new();
+        private static List<FormKey> _leftWeaponSpeedEffects = new();
 
         #endregion
 
@@ -150,10 +153,21 @@ namespace Engarde_Synthesis
 
         private static void SetGeneralAttackData(IAttack attack)
         {
-            if (!IsValidAttack(attack) || attack.AttackEvent!.Contains("H2H")) return;
-            string attackEvent = attack.AttackEvent;
+            if (!IsValidAttack(attack)) return;
+            string attackEvent = attack.AttackEvent!;
             attack.AttackData!.Knockdown = 0;
-            if (attack.AttackData.Spell.IsNull)
+
+            if (attackEvent == "AttackStartH2HRight")
+            {
+                ChangeBasicAttackStats(attack, 45);
+                attack.AttackData.AttackType = Engarde.Keyword.MCT_NormalAttackRight;
+            }
+            else if (attackEvent == "AttackStartH2HLeft")
+            {
+                ChangeBasicAttackStats(attack, 45);
+                attack.AttackData.AttackType = Engarde.Keyword.MCT_NormalAttackLeft;
+            }
+            else if (attack.AttackData.Spell.IsNull)
             {
                 if ((attackEvent.Contains("PowerStartLeft") || attackEvent.Contains("PowerStartRight")) &&
                     _settings.Value.basicAttacks.basicAttackTweaks)
@@ -207,8 +221,9 @@ namespace Engarde_Synthesis
                     ChangeBasicAttackStats(attack, 28, 1);
                     break;
                 case "attackPowerStartForward":
-                case "attackPowerStartForwardLeftHand": //28 0.1f +0.5f
+                case "attackPowerStartForwardLeftHand":
                     ChangeBasicAttackStats(attack, 28, 0.1f, 0.5f);
+                    attack.AttackData.AttackType = Skyrim.Keyword.PowerAttackTypeForward;
                     break;
                 case "attackPowerStartBackward":
                     ChangeBasicAttackStats(attack, 65, 0);
@@ -217,7 +232,6 @@ namespace Engarde_Synthesis
                 case "attackPowerStartDualWield":
                 {
                     ChangeBasicAttackStats(attack, 50, 1, -0.5f);
-                    attack.AttackData.AttackType = Skyrim.Keyword.PowerAttackTypeSide;
                     attack.AttackData.Spell = Engarde.ASpell.MCT_DualPowerAttackSpell;
                     break;
                 }
@@ -295,7 +309,7 @@ namespace Engarde_Synthesis
             }
         }
 
-        private static void SetWerewolfAttackData(IAttack attack)
+        private static void SetWerewolfAttackData(IAttack attack, bool isWerebeast, bool growlEnabled)
         {
             if (!IsValidAttack(attack))
             {
@@ -304,7 +318,18 @@ namespace Engarde_Synthesis
 
             string attackEvent = attack.AttackEvent!;
             attack.AttackData!.Knockdown = 0;
-            attack.AttackData.Spell = Engarde.ASpell.MCT_NormalAttackSpell;
+            if (isWerebeast)
+            {
+                if (growlEnabled)
+                {
+                    attack.AttackData.Spell = Growl.ASpell.HRI_Werewolf_Spell_Attack;
+                }
+                else
+                {
+                    attack.AttackData.Spell = Engarde.ASpell.MCT_NormalAttackSpell;
+                }
+            }
+
             switch (attackEvent)
             {
                 case "AttackStartDual":
@@ -319,7 +344,11 @@ namespace Engarde_Synthesis
                 case "AttackStartRightSprinting":
                     attack.AttackData.Flags = 0;
                     ChangeBasicAttackStats(attack, 55);
-                    attack.AttackData.Spell = Engarde.ASpell.MCT_BeastTackleAttackSpell;
+                    if (isWerebeast)
+                    {
+                        attack.AttackData.Spell = Engarde.ASpell.MCT_BeastTackleAttackSpell;
+                    }
+
                     return;
                 case "attackStartLeft":
                     ChangeBasicAttackStats(attack, strikeAngle: 40, attackAngle: -30);
@@ -332,13 +361,21 @@ namespace Engarde_Synthesis
                     attack.AttackData.Flags |= AttackData.Flag.PowerAttack;
                     ChangeBasicAttackStats(attack, strikeAngle: 40);
                     attack.AttackData.Stagger = 0.1f;
-                    attack.AttackData.Spell = Engarde.ASpell.MCT_BeastBleedAttackSpell;
+                    if (isWerebeast)
+                    {
+                        attack.AttackData.Spell = Engarde.ASpell.MCT_BeastBleedAttackSpell;
+                    }
+
                     break;
                 case "AttackStartLeftRunningPower":
                 case "AttackStartRightRunningPower":
                     ChangeBasicAttackStats(attack, 30, attackAngle: 0);
                     attack.AttackData.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                    attack.AttackData.Spell = Engarde.ASpell.MCT_BeastTackleAttackSpell;
+                    if (isWerebeast)
+                    {
+                        attack.AttackData.Spell = Engarde.ASpell.MCT_BeastTackleAttackSpell;
+                    }
+
                     break;
                 case "AttackStartLeftSide":
                 case "AttackStartRightSide":
@@ -349,7 +386,11 @@ namespace Engarde_Synthesis
                     attack.AttackData.Flags |= AttackData.Flag.RotatingAttack;
                     attack.AttackData.StaminaMult = 1.0f;
                     attack.AttackData.AttackType = Engarde.Keyword.MCT_SweepAttack;
-                    attack.AttackData.Spell = Engarde.ASpell.MCT_BackPowerAttackSpell;
+                    if (isWerebeast)
+                    {
+                        attack.AttackData.Spell = Engarde.ASpell.MCT_BackPowerAttackSpell;
+                    }
+
                     break;
             }
         }
@@ -670,7 +711,7 @@ namespace Engarde_Synthesis
             }
         }
 
-        private static void PatchGlobals(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        private static void PatchGlobals(this IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             ChangeGlobalShortValue(state, Engarde.Global.MCT_SprintToSneakEnabled,
                 _settings.Value.sprintToSneak ? 1 : 0);
@@ -681,7 +722,9 @@ namespace Engarde_Synthesis
             ChangeGlobalShortValue(state, Engarde.Global.MCT_PowerAttackControlEnabled,
                 _settings.Value.powerAttacks.powerAttackTweaks ? 1 : 0);
             ChangeGlobalShortValue(state, Engarde.Global.MCT_StaggerByArrowEnabled,
-                _settings.Value.staggerSettings.bowStagger ? (short) 1 : (short) 0);
+                _settings.Value.staggerSettings.bowStagger ? 1 : 0);
+            ChangeGlobalShortValue(state, Engarde.Global.MCT_DefensiveActionEnabled,
+                _settings.Value.defensiveActions.defensiveActions ? 1 : 0);
             ChangeGlobalShortValue(state, Engarde.Global.MCT_PowerAttackCoolDownTime,
                 _settings.Value.powerAttacks.powerAttackCooldown);
             ChangeGlobalShortValue(state, Engarde.Global.MCT_CGOIntegrationEnabled,
@@ -792,11 +835,13 @@ namespace Engarde_Synthesis
                 Race raceCopy = state.PatchMod.Races.GetOrAddAsOverride(race);
                 bool growlEnabled =
                     state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp"));
-                string behavior = raceCopy.BehaviorGraph.Male?.File ?? raceCopy.BehaviorGraph.Female?.File ?? "";
+                string behavior = raceCopy.BehaviorGraph.Male?.File ?? "";
                 raceCopy.AngularAccelerationRate = _settings.Value.npcSettings.angularAccelerationMult * 0.25f;
-                raceCopy.UnarmedReach = _settings.Value.npcSettings.unarmedReachMult * 96;
+                raceCopy.UnarmedReach = 77;
                 raceCopy.UnarmedDamage *= _settings.Value.npcSettings.unarmedDamageMult;
+
                 raceCopy.ActorEffect ??= new ExtendedList<IFormLink<IASpellGetter>>();
+
                 if (_settings.Value.fixAttackSpeed)
                 {
                     raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BaseWeaponSpeedMultSpell);
@@ -812,198 +857,117 @@ namespace Engarde_Synthesis
                     raceCopy.Attacks.ForEach(SetGeneralAttackData);
                 }
 
-                if (raceCopy.HasKeyword("ActorTypeNPC", state.LinkCache))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryAttackSpeed);
-                    raceCopy.ActorEffect ??= new ExtendedList<IFormLink<IASpellGetter>>();
-                    raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_NPCRaceSpell);
-                }
-
                 if (raceCopy.HasKeyword("ActorTypeUndead", state.LinkCache))
                 {
                     AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                    AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
                 }
 
-                if (behavior == "Actors\\AtronachFrost\\AtronachFrostProject.hkx")
+                switch (behavior)
                 {
-                    raceCopy.ActorEffect.Remove(Engarde.ASpell.MCT_DefaultRaceSpell);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
-                    if (_settings.Value.npcSettings.addArmorToArmored)
-                    {
-                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor500);
-                    }
-
-                    raceCopy.AngularAccelerationRate = 0.75f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 196 * _settings.Value.npcSettings.unarmedReachMult;
-                    raceCopy.Attacks.ForEach(SetAtronachFrostAttackData);
-                    if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dwarfsphere.esp")) &&
-                        (raceCopy.EditorID?.StartsWith("DwaSp") ?? false) &&
-                        (raceCopy.EditorID?.Contains("Cleaner") ?? false))
-                    {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
-                        raceCopy.BaseMass = 8;
-                        raceCopy.UnarmedDamage = 50 * _settings.Value.npcSettings.unarmedDamageMult;
-                    }
-                    else
-                    {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist3);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
-                        raceCopy.BaseMass = 6;
-                        raceCopy.UnarmedDamage = 50 * _settings.Value.npcSettings.unarmedDamageMult;
-                    }
-                }
-                else if (behavior == "Actors\\WerewolfBeast\\WerewolfBeastProject.hkx" &&
-                         _settings.Value.npcSettings.werewolfTweaks)
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_WerewolfRaceKW);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
-                    if (raceCopy.EditorID?.Contains("Werebear") ?? false)
-                    {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
-                        raceCopy.BaseMass = 6;
-                        raceCopy.UnarmedDamage = 25 * _settings.Value.npcSettings.unarmedDamageMult;
-                        if (growlEnabled)
-                        {
-                            raceCopy.UnarmedDamage = 10;
-                        }
-
-                        raceCopy.Starting[BasicStat.Health] = 1000;
-                        raceCopy.Starting[BasicStat.Stamina] = 450;
-                    }
-                    else if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Enderal - Forgotten Stories.esm"))
-                    )
-                    {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        raceCopy.BaseMass = 1.4f;
-                        raceCopy.UnarmedDamage = 8 * _settings.Value.npcSettings.unarmedDamageMult;
-                    }
-                    else
-                    {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist3);
-                        raceCopy.BaseMass = 3;
-                        raceCopy.UnarmedDamage = 15 * _settings.Value.npcSettings.unarmedDamageMult;
-                        if (growlEnabled)
-                        {
-                            raceCopy.UnarmedDamage = 10;
-                        }
-
-                        raceCopy.Starting[BasicStat.Health] = 300;
-                        raceCopy.Starting[BasicStat.Stamina] = 200;
-                    }
-
-                    raceCopy.UnarmedReach = 145;
-                    if (_settings.Value.npcSettings.addArmorToArmored)
-                    {
-                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
-                    }
-
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaminaControlledKW);
-                    raceCopy.Regen[BasicStat.Stamina] = 1;
-                    raceCopy.Attacks.ForEach(SetWerewolfAttackData);
-                }
-                else if (raceCopy.EditorID!.Contains("Atronach"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                    raceCopy.BaseMass = 2;
-                    if (raceCopy.EditorID.Contains("Flame"))
-                    {
+                    case "Actors\\AtronachFlame\\AtronachFlame.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+
+                        // base adjustment from vanilla
+                        raceCopy.BaseMass = 2;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                        raceCopy.UnarmedReach = 100 * _settings.Value.npcSettings.unarmedReachMult;
-                    }
-
-                    if (raceCopy.EditorID.Contains("Storm"))
+                        break;
+                    case "Actors\\AtronachFrost\\AtronachFrostProject.hkx":
                     {
+                        raceCopy.ActorEffect.Remove(Engarde.ASpell.MCT_DefaultRaceSpell);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
+                        if (_settings.Value.npcSettings.addArmorToArmored)
+                        {
+                            raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor500);
+                        }
+
+                        raceCopy.AngularAccelerationRate = 0.75f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 156;
+                        raceCopy.Attacks.ForEach(SetAtronachFrostAttackData);
+
+                        if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dwarfsphere.esp")) &&
+                            (raceCopy.EditorID?.StartsWith("DwaSp") ?? false) &&
+                            (raceCopy.EditorID?.Contains("Cleaner") ?? false))
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
+
+                            raceCopy.BaseMass = 8;
+                            raceCopy.UnarmedDamage = 50 * _settings.Value.npcSettings.unarmedDamageMult;
+                        }
+                        else
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist3);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
+
+                            raceCopy.BaseMass = 6;
+                            raceCopy.UnarmedDamage = 40 * _settings.Value.npcSettings.unarmedDamageMult;
+                        }
+
+                        break;
+                    }
+                    case "Actors\\AtronachStorm\\AtronachStormProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                        raceCopy.UnarmedReach = 200 * _settings.Value.npcSettings.unarmedReachMult;
-                    }
-                }
-                else if (raceCopy.EditorID.Contains("Bear") && raceCopy.EditorID.Contains("Race"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_PaddedKW);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryBleed);
-                    raceCopy.BaseMass = 3.5f;
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 124 * _settings.Value.npcSettings.unarmedReachMult;
-                    raceCopy.UnarmedDamage *= 1.5f;
-                    raceCopy.UnarmedReach *= 0.8f;
-                    raceCopy.Attacks.ForEach(SetBearAttackData);
-                }
-                else if (raceCopy.EditorID.Contains("Boar") && raceCopy.EditorID.Contains("Race"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                    raceCopy.Attacks.ForEach(x =>
-                    {
-                        if (!IsValidAttack(x)) return;
-                        x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                    });
-                }
-                else if (raceCopy.EditorID.Contains("CowRace"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                }
-                else if (raceCopy.EditorID.Contains("Chaurus") || raceCopy.EditorID.Contains("Siligonder"))
-                {
-                    if (_settings.Value.npcSettings.addArmorToArmored)
-                    {
-                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
-                    }
 
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryKnockDown);
-                    raceCopy.BaseMass = 2.5f;
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 96 * _settings.Value.npcSettings.unarmedReachMult;
-                }
-                else if (raceCopy.EditorID.Contains("DeerRace") || raceCopy.EditorID.Contains("ElkRace"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                    raceCopy.AngularAccelerationRate = 1;
-                    raceCopy.UnarmedReach = 96 * _settings.Value.npcSettings.unarmedReachMult;
-                }
-                else if (raceCopy.EditorID.StartsWith("DwaSp"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                    if (raceCopy.EditorID.Contains("JumperRace"))
-                    {
+                        raceCopy.BaseMass = 4;
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 160;
+                        break;
+                    case "Actors\\Bear\\BearProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_PaddedKW);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryBleed);
+
+                        raceCopy.BaseMass = 3.5f;
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 99;
+                        raceCopy.UnarmedDamage *= 1.5f;
+                        raceCopy.UnarmedReach *= 0.8f;
+
+                        raceCopy.Attacks.ForEach(SetBearAttackData);
+                        break;
+                    case "Actors\\DLC02\\BoarRiekling\\BoarProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+
+                        raceCopy.Attacks.ForEach(x =>
+                        {
+                            if (!IsValidAttack(x)) return;
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
+                        });
+                        break;
+                    case "Actors\\Cow\\HighlandCowProject.hkx":
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                        raceCopy.UnarmedReach = 92 * _settings.Value.npcSettings.unarmedReachMult;
-                    }
-                }
-                else if (raceCopy.EditorID.Contains("Dwarven"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                    if (raceCopy.EditorID.Contains("Spider"))
+                        break;
+                    case "Actors\\Chaurus\\ChaurusProject.hkx":
                     {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+                        if (_settings.Value.npcSettings.addArmorToArmored)
+                        {
+                            raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
+                        }
+
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
-                        raceCopy.BaseMass = 1;
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryKnockDown);
+
+                        raceCopy.BaseMass = 2.5f;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                        raceCopy.UnarmedReach = 92 * _settings.Value.npcSettings.unarmedReachMult;
+                        raceCopy.UnarmedReach = 86;
+                        break;
                     }
-                    else if (raceCopy.EditorID.Contains("Sphere") ||
-                             raceCopy.EditorID.Contains("DLC2DwarvenBallistaRace"))
+                    case "Actors\\DLC01\\ChaurusFlyer\\ChaurusFlyer.hkx":
                     {
                         if (_settings.Value.npcSettings.addArmorToArmored)
                         {
@@ -1012,334 +976,532 @@ namespace Engarde_Synthesis
 
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryStun);
-                        raceCopy.BaseMass = 2.5f;
-                        raceCopy.AngularAccelerationRate = 0.12f * _settings.Value.npcSettings.angularAccelerationMult;
-                        raceCopy.UnarmedReach = 128 * _settings.Value.npcSettings.unarmedReachMult;
-                        raceCopy.Attacks.ForEach(SetDwarvenSphereAttackData);
-                    }
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
 
-                    if (raceCopy.EditorID.Contains("Centurion"))
+                        raceCopy.BaseMass = 1.5f;
+                        raceCopy.AngularAccelerationRate = 1;
+                        break;
+                    }
+                    case "Actors\\Deer\\DeerProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+
+                        raceCopy.AngularAccelerationRate = 1;
+                        break;
+                    case "Actors\\Canine\\DogProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        break;
+                    case "Actors\\Dragon\\DragonProject.hkx" when _settings.Value.npcSettings.dragonTweaks:
                     {
-                        raceCopy.ActorEffect.Remove(Engarde.ASpell.MCT_DefaultRaceSpell);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DragonRaceKW);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower4);
+
                         if (_settings.Value.npcSettings.addArmorToArmored)
                         {
                             raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor500);
                         }
 
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
-                        raceCopy.BaseMass = 8;
-                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                        raceCopy.UnarmedReach = 250 * _settings.Value.npcSettings.unarmedReachMult;
-                        raceCopy.Attacks.ForEach(SetDwarvenCenturionAttackData);
-                    }
-                }
-                else if (raceCopy.EditorID.Contains("Dog") && raceCopy.EditorID.Contains("Race"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 64;
-                }
-                else if ((raceCopy.EditorID.Contains("Dragon") || raceCopy.EditorID == "AlduinRace") &&
-                         !raceCopy.EditorID.Contains("Priest") && _settings.Value.npcSettings.dragonTweaks)
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_DragonRaceKW);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower4);
-                    raceCopy.AngularAccelerationRate = 10;
-                    raceCopy.Starting[BasicStat.Health] = 1500;
-                    raceCopy.Starting[BasicStat.Stamina] = 350;
-                    raceCopy.ActorEffect.Remove(Engarde.ASpell.MCT_DefaultRaceSpell);
-                    if (_settings.Value.npcSettings.addArmorToArmored)
-                    {
-                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor500);
-                    }
+                        raceCopy.ActorEffect.Remove(Engarde.ASpell.MCT_DefaultRaceSpell);
+                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_StaminaDrainWhileFlying);
 
-                    raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_StaminaDrainWhileFlying);
-                    raceCopy.UnarmedReach = 180;
-                    raceCopy.Regen[BasicStat.Health] = 0;
-                    raceCopy.Regen[BasicStat.Stamina] = 1;
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                    raceCopy.BaseMass = 10;
-                    if (raceCopy.EditorID == "AlduinRace")
-                    {
-                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_DragonAlduinRaceSpell);
-                        raceCopy.UnarmedDamage = 150;
-                    }
-                    else
-                    {
-                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_DragonRaceSpell);
-                        raceCopy.UnarmedDamage = 100;
-                    }
+                        raceCopy.AngularAccelerationRate = 10;
+                        raceCopy.Starting[BasicStat.Health] = 1500;
+                        raceCopy.Starting[BasicStat.Stamina] = 350;
+                        raceCopy.UnarmedReach = 180;
+                        raceCopy.Regen[BasicStat.Health] = 0;
+                        raceCopy.Regen[BasicStat.Stamina] = 1;
+                        raceCopy.BaseMass = 10;
+                        if (raceCopy.EditorID == "AlduinRace")
+                        {
+                            raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_DragonAlduinRaceSpell);
+                            raceCopy.UnarmedDamage = 150;
+                        }
+                        else
+                        {
+                            raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_DragonRaceSpell);
+                            raceCopy.UnarmedDamage = 100;
+                        }
 
-                    raceCopy.Attacks.ForEach(SetDragonAttackData);
-                }
-                else if (raceCopy.EditorID.Contains("DragonPriest") || raceCopy.EditorID.Contains("LichRace"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 64;
-                }
-                else if (raceCopy.EditorID.Contains("DremoraRace"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 64;
-                }
-                else if (raceCopy.EditorID.Contains("Draugr") || raceCopy.EditorID.Contains("ZombieRace"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_NPCRaceSpell);
-                    raceCopy.BaseMass = 2;
-                    raceCopy.AngularAccelerationRate = 0.12f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 96 * _settings.Value.npcSettings.unarmedReachMult;
-                }
-                else if (raceCopy.EditorID.Contains("Falmer"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryAttackSpeed);
-                    raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_NPCRaceSpell);
-                    raceCopy.BaseMass = 1.5f;
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 96 * _settings.Value.npcSettings.unarmedReachMult;
-                    raceCopy.Attacks.ForEach(SetFalmerAttackData);
-                }
-                else if (raceCopy.EditorID.Contains("FrostbiteSpider"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryKnockDown);
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 96 * _settings.Value.npcSettings.unarmedReachMult;
-                    if (raceCopy.EditorID.Contains("Giant"))
-                    {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                        raceCopy.BaseMass = 3;
-                        var spellFormKey = Skyrim.ASpell.crSpider03PoisonBite;
-                        raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
+                        raceCopy.Attacks.ForEach(SetDragonAttackData);
+                        break;
                     }
-                    else if (raceCopy.EditorID.Contains("Large"))
+                    case "Actors\\Draugr\\DraugrProject.hkx":
+                    {
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_NPCRaceSpell);
+
+                        raceCopy.BaseMass = 2;
+                        raceCopy.AngularAccelerationRate = 0.12f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 77;
+
+                        if (raceCopy.EditorID!.Contains("Skeleton"))
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+
+                            if (_settings.Value.npcSettings.addArmorToArmored)
+                            {
+                                raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
+                            }
+
+                            raceCopy.BaseMass = 1.5f;
+                            raceCopy.AngularAccelerationRate =
+                                0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        }
+
+                        break;
+                    }
+                    case "Actors\\DLC02\\DwarvenBallistaCenturion\\BallistaCenturion.hkx":
                     {
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                        raceCopy.BaseMass = 1;
-                        var spellFormKey = Skyrim.ASpell.crSpider02PoisonBite;
-                        raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+
+                        if (_settings.Value.npcSettings.addArmorToArmored)
+                        {
+                            raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
+                        }
+
+                        // base adjustment from vanilla
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        break;
                     }
-                    else
+                    case "Actors\\DwarvenSteamCenturion\\SteamProject.hkx":
                     {
+                        raceCopy.ActorEffect.Remove(Engarde.ASpell.MCT_DefaultRaceSpell);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_KnockDownImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+
+                        if (_settings.Value.npcSettings.addArmorToArmored)
+                        {
+                            raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor500);
+                        }
+
+                        raceCopy.BaseMass = 8;
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 200;
+                        raceCopy.Attacks.ForEach(SetDwarvenCenturionAttackData);
+                        break;
+                    }
+                    case "Actors\\DwarvenSphereCenturion\\SphereCenturion.hkx":
+                    {
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryStun);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+                        if (_settings.Value.npcSettings.addArmorToArmored)
+                        {
+                            raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
+                        }
+
+                        raceCopy.BaseMass = 2.5f;
+                        raceCopy.AngularAccelerationRate = 0.12f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 102;
+                        raceCopy.Attacks.ForEach(SetDwarvenSphereAttackData);
+                        break;
+                    }
+                    case "Actors\\DwarvenSpider\\DwarvenSpiderCenturionProject.hkx":
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
-                        raceCopy.BaseMass = 0.2f;
-                        var spellFormKey = Skyrim.ASpell.crSpider01PoisonBite;
-                        raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
-                    }
-                }
-                else if (raceCopy.EditorID.Contains("Goat") && raceCopy.EditorID.Contains("Race"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 45;
-                }
-                else if (raceCopy.EditorID.Contains("GoblinRace"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    raceCopy.BaseMass = 1.5f;
-                    raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_NPCRaceSpell);
-                }
-                else if (raceCopy.EditorID.Contains("Hagraven"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 64;
-                }
-                else if (raceCopy.EditorID.Contains("Horker"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 64;
-                }
-                else if (raceCopy.EditorID.Contains("HorseRace"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 64;
-                }
-                else if (raceCopy.EditorID == "IceWraithRace")
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
-                    raceCopy.BaseMass = 0.7f;
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 192 * _settings.Value.npcSettings.unarmedReachMult;
-                }
-                else if (raceCopy.EditorID.Contains("GiantRace") || raceCopy.EditorID.Contains("LurkerRace") ||
-                         raceCopy.EditorID.Contains("OgreRace"))
-                {
-                    bool? isGiant = null;
-                    if (raceCopy.EditorID.Contains("GiantRace"))
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+                        if (_settings.Value.npcSettings.addArmorToArmored)
+                        {
+                            raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
+                        }
+
+                        raceCopy.BaseMass = 1;
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 77;
+                        break;
+                    case "Actors\\DragonPriest\\Dragon_Priest.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 64;
+                        break;
+                    case "Actors\\Falmer\\FalmerProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryAttackSpeed);
+                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_NPCRaceSpell);
+
+                        raceCopy.BaseMass = 1.5f;
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 77;
+                        raceCopy.Attacks.ForEach(SetFalmerAttackData);
+                        break;
+                    case "Actors\\FrostbiteSpider\\FrostbiteSpiderProject.hkx":
                     {
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryKnockDown);
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 77;
+                        if (raceCopy.EditorID!.Contains("Giant"))
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+                            raceCopy.BaseMass = 3;
+                            var spellFormKey = Skyrim.ASpell.crSpider03PoisonBite;
+                            raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
+                        }
+                        else if (raceCopy.EditorID.Contains("Large"))
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                            raceCopy.BaseMass = 1;
+                            var spellFormKey = Skyrim.ASpell.crSpider02PoisonBite;
+                            raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
+                        }
+                        else
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+                            raceCopy.BaseMass = 0.2f;
+                            var spellFormKey = Skyrim.ASpell.crSpider01PoisonBite;
+                            raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
+                        }
+
+                        break;
+                    }
+                    case "Actors\\Giant\\GiantProject.hkx":
+                    {
+                        bool? isGiant = null;
+                        if (raceCopy.EditorID!.Contains("Giant"))
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower4);
+
+                            raceCopy.BaseMass = 8;
+                            raceCopy.Starting[BasicStat.Health] = 2700;
+                            raceCopy.UnarmedDamage *= 2;
+                            raceCopy.UnarmedReach = 250;
+                            isGiant = true;
+                        }
+                        else
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist3);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
+
+                            raceCopy.BaseMass = 6;
+                        }
+
+                        if (_settings.Value.npcSettings.addArmorToArmored)
+                        {
+                            raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
+                        }
+
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_GiantRaceKW);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_KnockDownImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryMoveSpeed);
+
+                        raceCopy.AngularAccelerationRate = 5;
+                        if (_settings.Value.npcSettings.giantTweaks)
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaminaControlledKW);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_CanEnrage);
+                            raceCopy.Regen[BasicStat.Stamina] = 1;
+                        }
+
+                        raceCopy.Attacks.ForEach(x => SetGiantAttackData(x, isGiant ?? false));
+                        break;
+                    }
+                    case "Actors\\Goat\\GoatProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        break;
+                    case "Actors\\Hagraven\\HagravenProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 64;
+                        break;
+                    case "Actors\\Horker\\HorkerProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 64;
+                        break;
+                    case "Actors\\Horse\\HorseProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        break;
+                    // humanoid npc races
+                    case "Actors\\Character\\DefaultMale.hkx":
+                    {
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryAttackSpeed);
+                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_NPCRaceSpell);
+
+                        // Dremora
+                        if (raceCopy.EditorID!.Contains("DremoraRace"))
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+                        }
+                        else
+                        {
+                            // normal humanoid
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                        }
+
+                        // base adjustment from vanilla
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 64;
+
+                        // no use, attacks added this way aren't valid without behvaior changes
+                        // it'll do damage but no attack spell
+                        //if (settings.comboAttacks) {
+                        //	let addedAttack = xelib.AddArrayItem(record, 'Attacks', 'ATKD\\Damage Mult', '100.32');
+                        //	xelib.SetFloatValue(addedAttack, 'ATKD\\Attack Chance', '33.0');
+                        //	xelib.SetFloatValue(addedAttack, 'ATKD\\Attack Angle', '0.0');
+                        //	xelib.SetFloatValue(addedAttack, 'ATKD\\Strike Angle', '35.0');
+                        //	xelib.SetFloatValue(addedAttack, 'ATKD\\Stagger', '0.0');
+                        //	xelib.SetFloatValue(addedAttack, 'ATKD\\Knockdown', '0.0');
+                        //	xelib.SetFloatValue(addedAttack, 'ATKD\\Recovery Time', '0.0');
+                        //	xelib.SetFloatValue(addedAttack, 'ATKD\\Stamina Mult', '1.0');
+                        //	xelib.AddElementValue(addedAttack, 'ATKE - Attack Event', 'mct2hmComboStart');
+                        //}
+                        break;
+                    }
+                    case "Actors\\IceWraith\\IceWraithProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
+
+                        raceCopy.BaseMass = 0.7f;
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 153;
+                        break;
+                    case "Actors\\Mammoth\\MammothProject.hkx":
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower4);
-                        raceCopy.BaseMass = 8;
-                        raceCopy.Starting[BasicStat.Health] += 500;
-                        raceCopy.UnarmedDamage *= 2;
-                        raceCopy.UnarmedReach = 250;
-                        isGiant = true;
-                    }
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_KnockDownImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
 
-                    if (raceCopy.EditorID.Contains("LurkerRace") || raceCopy.EditorID.Contains("OgreRace"))
-                    {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist3);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
-                        raceCopy.BaseMass = 6;
-                    }
+                        raceCopy.AngularAccelerationRate = 0.5f * _settings.Value.npcSettings.angularAccelerationMult;
+                        break;
+                    case "Actors\\Mudcrab\\MudcrabProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
 
-                    if (_settings.Value.npcSettings.addArmorToArmored)
-                    {
-                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
-                    }
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 64;
 
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_GiantRaceKW);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryMoveSpeed);
-                    raceCopy.AngularAccelerationRate = 5;
-                    if (_settings.Value.npcSettings.giantTweaks)
+                        raceCopy.Attacks.ForEach(x =>
+                        {
+                            if (!IsValidAttack(x)) return;
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
+                        });
+                        break;
+                    case "Actors\\DLC02\\Riekling\\RieklingProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+
+                        raceCopy.BaseMass = 1;
+                        raceCopy.Attacks.ForEach(x =>
+                        {
+                            if (!IsValidAttack(x)) return;
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
+                        });
+                        break;
+                    case "Actors\\SabreCat\\SabreCatProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_PaddedKW);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryBleed);
+                        raceCopy.BaseMass = 3;
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 68;
+                        raceCopy.UnarmedDamage *= 1.2f;
+
+                        raceCopy.Attacks.ForEach(x =>
+                        {
+                            if (!IsValidAttack(x)) return;
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
+                        });
+                        break;
+                    case "Actors\\Skeever\\SkeeverProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 64;
+
+                        raceCopy.Attacks.ForEach(x =>
+                        {
+                            if (!IsValidAttack(x)) return;
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
+                        });
+                        break;
+                    case "Actors\\Spriggan\\Spriggan.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 77;
+                        break;
+                    // VampireLord, not balanced yet
+                    case "Actors\\Troll\\TrollProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
+
+                        raceCopy.BaseMass = 3;
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 112;
+                        raceCopy.Attacks.ForEach(SetTrollAttackData);
+                        break;
+                    case "Actors\\VampireLord\\VampireLord.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_PaddedKW);
+                        break;
+                    case "Actors\\WerewolfBeast\\WerewolfBeastProject.hkx"
+                        when _settings.Value.npcSettings.werewolfTweaks:
                     {
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_WerewolfRaceKW);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_StaminaControlledKW);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CanEnrage);
+
                         raceCopy.Regen[BasicStat.Stamina] = 1;
-                    }
 
-                    raceCopy.Attacks.ForEach(x => SetGiantAttackData(x, isGiant ?? false));
-                }
-                else if (raceCopy.EditorID.Contains("Mammoth"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower4);
-                    raceCopy.AngularAccelerationRate = 0.5f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 128 * _settings.Value.npcSettings.unarmedReachMult;
-                }
-                else if (raceCopy.EditorID.Contains("Mudcrab"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 64;
-                    raceCopy.Attacks.ForEach(x =>
-                    {
-                        if (!IsValidAttack(x)) return;
-                        x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                    });
-                }
-                else if (raceCopy.EditorID.Contains("RieklingRace"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                    raceCopy.BaseMass = 1;
-                    raceCopy.Attacks.ForEach(x =>
-                    {
-                        if (!IsValidAttack(x)) return;
-                        x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                    });
-                }
-                else if (raceCopy.EditorID.Contains("SabreCat") || raceCopy.EditorID.Contains("MountainLionRace"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_PaddedKW);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryBleed);
-                    raceCopy.BaseMass = 3;
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 85 * _settings.Value.npcSettings.unarmedReachMult;
-                    raceCopy.UnarmedDamage *= 1.2f;
-                    raceCopy.Attacks.ForEach(x =>
-                    {
-                        if (!IsValidAttack(x)) return;
-                        x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                    });
-                }
-                else if (raceCopy.EditorID.Contains("Skeleton") && !raceCopy.EditorID.Contains("Dragon"))
-                {
-                    if (_settings.Value.npcSettings.addArmorToArmored)
-                    {
-                        raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
-                    }
+                        bool isWerebeast = false;
+                        if (raceCopy.EditorID?.Contains("Werebear") ?? false)
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
 
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
-                    raceCopy.BaseMass = 1.5f;
-                    raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_NPCRaceSpell);
-                }
-                else if (raceCopy.EditorID.Contains("Skeever") || raceCopy.EditorID.Contains("Skeever"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 64;
-                    raceCopy.Attacks.ForEach(x =>
-                    {
-                        if (!IsValidAttack(x)) return;
-                        x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                    });
-                }
-                else if (raceCopy.EditorID.Contains("Spriggan"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 96 * _settings.Value.npcSettings.unarmedReachMult;
-                }
-                else if (raceCopy.EditorID.Contains("Troll") && raceCopy.EditorID.Contains("Race"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                    raceCopy.BaseMass = 3;
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 140 * _settings.Value.npcSettings.unarmedReachMult;
-                    raceCopy.Attacks.ForEach(SetTrollAttackData);
-                }
-                else if (raceCopy.EditorID.Contains("VampireBeast"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerImmune);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_PaddedKW);
-                }
-                else if (raceCopy.EditorID.Contains("Wisp"))
-                {
-                    raceCopy.BaseMass = 0.2f;
-                    raceCopy.AngularAccelerationRate = 1;
-                    raceCopy.UnarmedReach = 96 * _settings.Value.npcSettings.unarmedReachMult;
-                }
-                else if (raceCopy.EditorID.Contains("WitchlightRace"))
-                {
-                    raceCopy.BaseMass = 0.2f;
-                    raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 64;
-                }
-                else if (raceCopy.EditorID.Contains("WolfRace"))
-                {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryBleed);
-                    raceCopy.AngularAccelerationRate = 0.3f * _settings.Value.npcSettings.angularAccelerationMult;
-                    raceCopy.UnarmedReach = 64;
-                    raceCopy.Attacks.ForEach(x =>
-                    {
-                        if (!IsValidAttack(x)) return;
-                        x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                    });
+                            raceCopy.BaseMass = 6;
+                            if (growlEnabled)
+                            {
+                                raceCopy.UnarmedDamage = 10;
+                            }
+                            else
+                            {
+                                raceCopy.UnarmedDamage = 25 * _settings.Value.npcSettings.unarmedDamageMult;
+                            }
+
+                            raceCopy.UnarmedReach = 145;
+                            raceCopy.Starting[BasicStat.Health] = 1000;
+                            raceCopy.Starting[BasicStat.Stamina] = 450;
+                            isWerebeast = true;
+                        }
+                        else if (raceCopy.EditorID!.Contains("Were"))
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist3);
+                            raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
+
+                            raceCopy.BaseMass = 3;
+                            if (growlEnabled)
+                            {
+                                raceCopy.UnarmedDamage = 10;
+                            }
+                            else
+                            {
+                                raceCopy.UnarmedDamage = 15 * _settings.Value.npcSettings.unarmedDamageMult;
+                            }
+
+                            raceCopy.UnarmedReach = 145;
+                            raceCopy.Starting[BasicStat.Health] = 300;
+                            raceCopy.Starting[BasicStat.Stamina] = 200;
+                            isWerebeast = true;
+                        }
+                        else
+                        {
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+
+                            raceCopy.BaseMass = 1.4f;
+                            raceCopy.UnarmedDamage = 8 * _settings.Value.npcSettings.unarmedDamageMult;
+                        }
+
+                        raceCopy.Attacks.ForEach(attack => SetWerewolfAttackData(attack, isWerebeast, growlEnabled));
+                        break;
+                    }
+                    case "Actors\\Wisp\\WispProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_KnockDownImmune);
+
+                        raceCopy.BaseMass = 0.2f;
+                        raceCopy.AngularAccelerationRate = 1;
+                        raceCopy.UnarmedReach = 77;
+                        break;
+                    case "Actors\\Witchlight\\WitchlightProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_KnockDownImmune);
+
+                        raceCopy.BaseMass = 0.2f;
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 64;
+                        break;
+                    case "Actors\\Canine\\WolfProject.hkx":
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryBleed);
+                        raceCopy.AngularAccelerationRate = 0.3f * _settings.Value.npcSettings.angularAccelerationMult;
+                        raceCopy.UnarmedReach = 64;
+                        raceCopy.Attacks.ForEach(x =>
+                        {
+                            if (!IsValidAttack(x)) return;
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
+                        });
+                        break;
                 }
             }
         }
 
+        private static void PatchPerks(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            static IPerk CopyPerk(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState, FormKey formKey)
+            {
+                IPerkGetter perk = patcherState.LinkCache.Resolve<IPerkGetter>(formKey);
+                IPerk perkCopy = patcherState.PatchMod.Perks.GetOrAddAsOverride(perk);
+                return perkCopy;
+            }
+
+            IPerk perkCopy = CopyPerk(state, Engarde.Perk.MCT_MultDamageOnForwardPowerAttack);
+            PerkEntryPointModifyValue perkEffect = (PerkEntryPointModifyValue) perkCopy.Effects[0];
+            perkEffect.Value = _settings.Value.powerAttacks.forwardDamageMult;
+            
+            perkCopy = CopyPerk(state, Engarde.Perk.MCT_MultDamageOnSidePowerAttack);
+            perkEffect = (PerkEntryPointModifyValue) perkCopy.Effects[0];
+            perkEffect.Value = _settings.Value.powerAttacks.sideDamageMult;
+            
+            perkCopy = CopyPerk(state, Engarde.Perk.MCT_ArrowAttackedSlowTimePerk);
+            perkEffect = (PerkEntryPointModifyValue) perkCopy.Effects[0];
+            perkEffect.Value *= _settings.Value.combatFocus.playerSpeedMult;
+            
+            perkCopy = CopyPerk(state, Engarde.Perk.MCT_PowerAttackedSlowTimePerk);
+            perkEffect = (PerkEntryPointModifyValue) perkCopy.Effects[0];
+            perkEffect.Value *= _settings.Value.combatFocus.playerSpeedMult;
+        }
+        
         private static void PatchNpcs(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             foreach (INpcGetter npc in state.LoadOrder.PriorityOrder.WinningOverrides<INpcGetter>())
@@ -1351,16 +1513,16 @@ namespace Engarde_Synthesis
                     continue;
                 }
 
-                if (!( /*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
+                if (!(/*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
                       || npcRaceEdid == "AlduinRace" ||*/ npcRaceEdid.Contains("GiantRace") ||
-                                                          npcRaceEdid.Contains("LurkerRace")))
+                      npcRaceEdid.Contains("LurkerRace")))
                 {
                     continue;
                 }
 
-                INpc npcCopy = state.PatchMod.Npcs.GetOrAddAsOverride(npc);
                 if (_settings.Value.staggerSettings.weaponStagger)
                 {
+                    INpc npcCopy = state.PatchMod.Npcs.GetOrAddAsOverride(npc);
                     npcCopy.Attacks.ForEach(attack =>
                     {
                         if (!IsValidAttack(attack)) return;
@@ -1374,6 +1536,7 @@ namespace Engarde_Synthesis
 
                 if (npcRaceEdid.Contains("GiantRace") || npcRaceEdid.Contains("LurkerRace"))
                 {
+                    INpc npcCopy = state.PatchMod.Npcs.GetOrAddAsOverride(npc);
                     npcCopy.Perks ??= new ExtendedList<PerkPlacement>();
                     npcCopy.Perks.Add(new PerkPlacement {Perk = Engarde.Perk.MCT_VolnerabilityCritical, Rank = 1});
                 }
@@ -1453,6 +1616,27 @@ namespace Engarde_Synthesis
 
                 idleCopy = CopyIdle(state, Skyrim.IdleAnimation.DualWieldPowerAttack);
                 idleCopy.Conditions.Add(staminaCondition);
+
+                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.PlayerStagger);
+                ConditionData getAttackState = new FunctionConditionData
+                {
+                    Function = (ushort) ConditionData.Function.GetAttackState
+                };
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 1,
+                    Data = getAttackState
+                });
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 2,
+                    Data = getAttackState
+                });
+                idleCopy.AnimationEvent = "recoilLargeStart";
             }
 
             if (_settings.Value.basicAttacks.basicAttackTweaks && _settings.Value.basicAttacks.dwAttackTweaks)
@@ -1529,7 +1713,9 @@ namespace Engarde_Synthesis
                     CopyIdle(state, Skyrim.IdleAnimation.DefaultSheathe),
                     CopyIdle(state, Skyrim.IdleAnimation.AttackRightPower2HMForwardSprinting),
                     CopyIdle(state, Skyrim.IdleAnimation.AttackRightPower2HWForwardSprinting),
-                    CopyIdle(state, Skyrim.IdleAnimation.AttackRightPowerForwardSprinting)
+                    CopyIdle(state, Skyrim.IdleAnimation.AttackRightPowerForwardSprinting),
+                    CopyIdle(state, Skyrim.IdleAnimation.H2HRightHandPowerAttack),
+                    CopyIdle(state, Skyrim.IdleAnimation.H2HLeftHandPowerAttack)
                 };
 
                 idlesToDisable.ForEach(idle => idle.Conditions.Add(disableCondition));
@@ -1639,6 +1825,12 @@ namespace Engarde_Synthesis
 
         private static void PatchWerewolves(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
+            if (!_settings.Value.npcSettings.werewolfTweaks || !_settings.Value.powerAttacks.powerAttackTweaks ||
+                state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Brevi_MoonlightTales.esp")))
+            {
+                return;
+            }
+
             IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfSheathe);
             idleCopy.RelatedIdles[1] = new FormLink<IIdleRelationGetter>(Engarde.IdleAnimation.MCTPowerAttackRootBeast);
 
@@ -1656,6 +1848,9 @@ namespace Engarde_Synthesis
             idleCopy.Conditions.Add(condition);
 
             idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfAttackLeftFast);
+            idleCopy.Conditions.Add(condition);
+
+            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.AttackStartDualBackHand);
             idleCopy.Conditions.Add(condition);
 
             idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfLeftPowerAttackRoot);
@@ -1676,10 +1871,12 @@ namespace Engarde_Synthesis
                 return;
             }
 
+            
             Condition disableCondition = new ConditionFloat()
             {
                 CompareOperator = CompareOperator.EqualTo,
                 ComparisonValue = 0,
+                Flags = Condition.Flag.SwapSubjectAndTarget,
                 Data = new FunctionConditionData
                 {
                     Function = (ushort) ConditionData.Function.GetIsID,
@@ -1921,16 +2118,20 @@ namespace Engarde_Synthesis
             if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dragonborn.esm")))
             {
                 IMagicEffect effectCopy = CopyEffect(state, Engarde.MagicEffect.MCT_DragonInjuryMouth);
-                ScriptObjectProperty property =
-                    (ScriptObjectProperty) effectCopy.VirtualMachineAdapter!.Scripts[0].Properties[7];
-                property.Object = Dragonborn.ASpell.DLC2DragonFireBreathShout06;
-                effectCopy.VirtualMachineAdapter!.Scripts[0].Properties[7] = property;
-                property = (ScriptObjectProperty) effectCopy.VirtualMachineAdapter!.Scripts[0].Properties[8];
-                property.Object = Dragonborn.ASpell.DLC2DragonFrostBreathShout06;
-                effectCopy.VirtualMachineAdapter!.Scripts[0].Properties[8] = property;
+                
+                ExtendedList<ScriptProperty> properties =  effectCopy.VirtualMachineAdapter!.Scripts[0].Properties;
+                foreach (var scriptProperty in properties.Cast<ScriptObjectProperty>())
+                {
+                    scriptProperty.Object = scriptProperty.Name switch
+                    {
+                        "shout13" => Dragonborn.ASpell.DLC2DragonFireBreathShout06,
+                        "shout14" => Dragonborn.ASpell.DLC2DragonFrostBreathShout06,
+                        _ => scriptProperty.Object
+                    };
+                }
             }
         }
-        
+
         private static void PatchSpells(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             static void AddStaggerEffects(ISpell spell)
@@ -2119,7 +2320,21 @@ namespace Engarde_Synthesis
                     {
                         Magnitude = 0,
                         Area = 0,
-                        Duration = 1
+                        Duration = 2
+                    }
+                });
+            }
+
+            if (_settings.Value.npcSettings.npcAttackWindup)
+            {
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_ActorBehaviorAttackWillWindUp,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 2
                     }
                 });
             }
@@ -2137,6 +2352,14 @@ namespace Engarde_Synthesis
                     }
                 });
             }
+
+            spellCopy = CopySpell(state, Engarde.ASpell.MCT_ArrowAttackedSlowTimeSpell);
+            spellCopy.Effects[0].Data!.Magnitude *= _settings.Value.combatFocus.worldSpeedMult;
+            spellCopy.Effects[0].Data!.Duration = (int)Math.Round(spellCopy.Effects[0].Data!.Duration * _settings.Value.combatFocus.durationMult);
+            
+            spellCopy = CopySpell(state, Engarde.ASpell.MCT_PowerAttackedSlow01TimeSpell);
+            spellCopy.Effects[0].Data!.Magnitude *= _settings.Value.combatFocus.worldSpeedMult;
+            spellCopy.Effects[0].Data!.Duration = (int)Math.Round(spellCopy.Effects[0].Data!.Duration * _settings.Value.combatFocus.durationMult);
 
             if (_settings.Value.npcSettings.giantTweaks)
             {
@@ -2215,7 +2438,7 @@ namespace Engarde_Synthesis
                 spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
 
                 spellCopy = CopySpell(state, Skyrim.ASpell.L_VoiceDragonFrostBall01);
-                TuneLDragonSpell(spellCopy, 10, 1);
+                TuneLDragonSpell(spellCopy, 10, 0);
                 spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
 
                 List<ISpell> dragonShouts = new()
@@ -2334,13 +2557,30 @@ namespace Engarde_Synthesis
                 staggeringAttackSpells.ForEach(AddStaggerEffects);
                 bool containsGrowl =
                     state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp"));
-                if (containsGrowl)
-                {
-                    AddStaggerEffects(CopySpell(state, Growl.ASpell.HRI_Werewolf_Spell_Attack));
-                }
 
                 if (_settings.Value.npcSettings.werewolfTweaks)
                 {
+                    if (containsGrowl)
+                    {
+                        spellCopy = CopySpell(state, Growl.ASpell.HRI_Werewolf_Spell_Attack);
+                        AddStaggerEffects(spellCopy);
+                        EffectData staggerData = new EffectData
+                        {
+                            Magnitude = 0,
+                            Area = 0,
+                            Duration = 1
+                        };
+                        spellCopy.Effects.Add(new Effect
+                        {
+                            BaseEffect = Engarde.MagicEffect.MCT_StaggersOthers0,
+                            Data = staggerData
+                        });
+                        spellCopy.Effects.Add(new Effect
+                        {
+                            BaseEffect = Engarde.MagicEffect.MCT_StaggersOthers1,
+                            Data = staggerData
+                        });
+                    }
                     spellCopy = CopySpell(state, Skyrim.ASpell.AbWerewolf);
 
                     if (!containsGrowl)
@@ -2363,7 +2603,7 @@ namespace Engarde_Synthesis
                     if (containsGrowl)
                     {
                         spellCopy = CopySpell(state, Dragonborn.ASpell.DLC2AbWerebear);
-                        
+
                         spellCopy.Effects[1].Data!.Magnitude = 300;
                         spellCopy.Effects[2].Data!.Magnitude = 400;
 
@@ -2434,15 +2674,29 @@ namespace Engarde_Synthesis
                 }
             }
         }
-
+        
+        private static void PatchWeaponSpeedEffects(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            foreach (IMagicEffectGetter effect in state.LoadOrder.PriorityOrder.WinningOverrides<IMagicEffectGetter>())
+            {
+                if (effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult || effect.SecondActorValue == ActorValue.WeaponSpeedMult) {
+                    _weaponSpeedEffects.Add(effect.FormKey);
+                }
+                if (effect.Archetype.ActorValue == ActorValue.LeftWeaponSpeedMultiply || effect.SecondActorValue == ActorValue.LeftWeaponSpeedMultiply) {
+                    
+                    _leftWeaponSpeedEffects.Add(effect.FormKey);
+                }
+            }
+        }
         #endregion
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            PatchGlobals(state);
+            state.PatchGlobals();
             PatchArmors(state);
             PatchWeapons(state);
             PatchRaces(state);
+            PatchPerks(state);
             PatchNpcs(state);
             PatchAttacks(state);
             PatchPowerAttacks(state);
@@ -2453,7 +2707,32 @@ namespace Engarde_Synthesis
             PatchDefensiveMoves(state);
             PatchEffects(state);
             PatchSpells(state);
-            
+            PatchWeaponSpeedEffects(state);
+
+            PatchweaponSpeedSpell(state);
+        }
+
+        private static void PatchweaponSpeedSpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            if (!_settings.Value.fixAttackSpeed) {
+                return;
+            }
+
+            foreach (ISpellGetter spell in state.LoadOrder.PriorityOrder.WinningOverrides<ISpellGetter>())
+            {
+                static void PatchSpell(IEffect effect)
+                {
+                    effect.Data!.Magnitude -= 1;
+                }
+                static bool Predicate(IEffectGetter x) => (_weaponSpeedEffects.Contains(x.BaseEffect.FormKey) || _leftWeaponSpeedEffects.Contains(x.BaseEffect.FormKey)) && x.Data?.Magnitude > 1;
+
+                bool haveWeaponSpeedEffect = spell.Effects.Any(Predicate);
+                if (haveWeaponSpeedEffect)
+                {
+                    var spellCopy = state.PatchMod.Spells.GetOrAddAsOverride(spell);
+                    spellCopy.Effects.Where(Predicate).ForEach(PatchSpell);
+                }
+            }
         }
     }
 }

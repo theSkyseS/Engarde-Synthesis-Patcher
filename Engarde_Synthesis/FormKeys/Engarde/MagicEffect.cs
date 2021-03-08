@@ -5,11 +5,6 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
         public static class MagicEffect
         {
             private readonly static ModKey ModKey = ModKey.FromNameAndExtension("Engarde.esp");
-            public static FormKey MCT_Test => ModKey.MakeFormKey(0x289d);
-            public static FormKey MCT_TestIsMoving => ModKey.MakeFormKey(0x497b);
-            public static FormKey MCT_TestSendAnimationEvent => ModKey.MakeFormKey(0x544e);
-            public static FormKey MCT_PowerBashedMedStagger => ModKey.MakeFormKey(0xd08a);
-            public static FormKey MCT_PowerAttackSlowTime => ModKey.MakeFormKey(0x2abda);
             public static FormKey MCT_TestPerkToApply => ModKey.MakeFormKey(0x4177c);
             public static FormKey MCT_TestAnimationVariables => ModKey.MakeFormKey(0x55b88);
             public static FormKey MCT_StaminaRateMultPenalty => ModKey.MakeFormKey(0x64e94);
@@ -117,6 +112,20 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
             public static FormKey MCT_WerewolfHowl => ModKey.MakeFormKey(0x292677);
             public static FormKey MCT_DefaultRace => ModKey.MakeFormKey(0x801);
             public static FormKey MCT_MoveSpeedPenalty => ModKey.MakeFormKey(0x294c30);
+            public static FormKey MCT_ActorBehaviorAttackWillWindUp => ModKey.MakeFormKey(0x295197);
+            public static FormKey MCT_ActorBehaviorAttackWindUpRecover => ModKey.MakeFormKey(0x295199);
+            public static FormKey MCT_PlayerAttackWillWindUp => ModKey.MakeFormKey(0x29519b);
+            public static FormKey MCT_ActorBehaviorAttackWindUp => ModKey.MakeFormKey(0x295196);
+            public static FormKey MCT_MoveSpeedPenaltyTemporary => ModKey.MakeFormKey(0x295c62);
+            public static FormKey MCT_HitRepelledRight => ModKey.MakeFormKey(0x295c61);
+            public static FormKey MCT_KnockdownByWeapon => ModKey.MakeFormKey(0x2961c8);
+            public static FormKey MCT_Test => ModKey.MakeFormKey(0x289d);
+            public static FormKey MCT_TestIsMoving => ModKey.MakeFormKey(0x497b);
+            public static FormKey MCT_DamageStaminaByWeapon => ModKey.MakeFormKey(0x2961cb);
+            public static FormKey MCT_HitRepelledLeft => ModKey.MakeFormKey(0x29672f);
+            public static FormKey MCT_TestSendAnimationEvent => ModKey.MakeFormKey(0x544e);
+            public static FormKey MCT_PowerBashedMedStagger => ModKey.MakeFormKey(0xd08a);
+            public static FormKey MCT_PowerAttackSlowTime => ModKey.MakeFormKey(0x2abda);
         }
     }
 }

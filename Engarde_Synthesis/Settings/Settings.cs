@@ -38,6 +38,9 @@ namespace Engarde_Synthesis.Settings
 
         [SynthesisSettingName("Weapon stats:")]
         public WeaponSettings weaponSettings { get; set; } = new();
+
+        [SynthesisSettingName("Combat focus settings:")]
+        public CombatFocus combatFocus { get; set; } = new();
         
 
         //public float enchantMult { get; set; } = 1.5f;
