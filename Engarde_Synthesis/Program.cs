@@ -980,7 +980,7 @@ namespace Engarde_Synthesis
                         AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
 
                         raceCopy.BaseMass = 1.5f;
-                        raceCopy.AngularAccelerationRate = 1;
+                        raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         break;
                     }
                     case "Actors\\Deer\\DeerProject.hkx":
@@ -1391,6 +1391,7 @@ namespace Engarde_Synthesis
                         {
                             AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
                             AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
+                            raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
 
                             raceCopy.BaseMass = 6;
                             if (growlEnabled)
@@ -2744,7 +2745,7 @@ namespace Engarde_Synthesis
                     state.LinkCache.Resolve<IProjectileGetter>(Skyrim.Projectile.DragonFrostBallWispyProjectile);
                 projectileCopy = state.PatchMod.Projectiles.GetOrAddAsOverride(projectile);
                 projectileCopy.Speed = 600;
-                projectileCopy.CollisionRadius = 20;
+                projectileCopy.CollisionRadius = 10;
             }
         }
 
