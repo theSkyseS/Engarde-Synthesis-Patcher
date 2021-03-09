@@ -1704,6 +1704,7 @@ namespace Engarde_Synthesis
                     ParameterOneRecord = Skyrim.Npc.Player,
                 }
             };
+            
             if (_settings.Value.powerAttacks.powerAttackTweaks)
             {
                 List<IIdleAnimation> idlesToDisable = new()
@@ -1871,18 +1872,18 @@ namespace Engarde_Synthesis
                 return;
             }
 
-            
             Condition disableCondition = new ConditionFloat()
             {
                 CompareOperator = CompareOperator.EqualTo,
                 ComparisonValue = 0,
-                Flags = Condition.Flag.SwapSubjectAndTarget,
                 Data = new FunctionConditionData
                 {
                     Function = (ushort) ConditionData.Function.GetIsID,
                     ParameterOneRecord = Skyrim.Npc.Player,
+                    Unknown3 = (int) Condition.RunOnType.Target // run on
                 }
             };
+            
 
             List<IIdleAnimation> killmovesToDisable = new()
             {
