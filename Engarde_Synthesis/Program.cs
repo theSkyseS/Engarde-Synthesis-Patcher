@@ -1488,20 +1488,20 @@ namespace Engarde_Synthesis
             IPerk perkCopy = CopyPerk(state, Engarde.Perk.MCT_MultDamageOnForwardPowerAttack);
             PerkEntryPointModifyValue perkEffect = (PerkEntryPointModifyValue) perkCopy.Effects[0];
             perkEffect.Value = _settings.Value.powerAttacks.forwardDamageMult;
-            
+
             perkCopy = CopyPerk(state, Engarde.Perk.MCT_MultDamageOnSidePowerAttack);
             perkEffect = (PerkEntryPointModifyValue) perkCopy.Effects[0];
             perkEffect.Value = _settings.Value.powerAttacks.sideDamageMult;
-            
+
             perkCopy = CopyPerk(state, Engarde.Perk.MCT_ArrowAttackedSlowTimePerk);
             perkEffect = (PerkEntryPointModifyValue) perkCopy.Effects[0];
             perkEffect.Value *= _settings.Value.combatFocus.playerSpeedMult;
-            
+
             perkCopy = CopyPerk(state, Engarde.Perk.MCT_PowerAttackedSlowTimePerk);
             perkEffect = (PerkEntryPointModifyValue) perkCopy.Effects[0];
             perkEffect.Value *= _settings.Value.combatFocus.playerSpeedMult;
         }
-        
+
         private static void PatchNpcs(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             foreach (INpcGetter npc in state.LoadOrder.PriorityOrder.WinningOverrides<INpcGetter>())
@@ -1513,9 +1513,9 @@ namespace Engarde_Synthesis
                     continue;
                 }
 
-                if (!(/*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
+                if (!( /*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
                       || npcRaceEdid == "AlduinRace" ||*/ npcRaceEdid.Contains("GiantRace") ||
-                      npcRaceEdid.Contains("LurkerRace")))
+                                                          npcRaceEdid.Contains("LurkerRace")))
                 {
                     continue;
                 }
@@ -1704,7 +1704,7 @@ namespace Engarde_Synthesis
                     ParameterOneRecord = Skyrim.Npc.Player,
                 }
             };
-            
+
             if (_settings.Value.powerAttacks.powerAttackTweaks)
             {
                 List<IIdleAnimation> idlesToDisable = new()
@@ -1883,7 +1883,7 @@ namespace Engarde_Synthesis
                     Unknown3 = (int) Condition.RunOnType.Target // run on
                 }
             };
-            
+
 
             List<IIdleAnimation> killmovesToDisable = new()
             {
@@ -2119,8 +2119,8 @@ namespace Engarde_Synthesis
             if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dragonborn.esm")))
             {
                 IMagicEffect effectCopy = CopyEffect(state, Engarde.MagicEffect.MCT_DragonInjuryMouth);
-                
-                ExtendedList<ScriptProperty> properties =  effectCopy.VirtualMachineAdapter!.Scripts[0].Properties;
+
+                ExtendedList<ScriptProperty> properties = effectCopy.VirtualMachineAdapter!.Scripts[0].Properties;
                 foreach (var scriptProperty in properties.Cast<ScriptObjectProperty>())
                 {
                     scriptProperty.Object = scriptProperty.Name switch
@@ -2356,11 +2356,13 @@ namespace Engarde_Synthesis
 
             spellCopy = CopySpell(state, Engarde.ASpell.MCT_ArrowAttackedSlowTimeSpell);
             spellCopy.Effects[0].Data!.Magnitude *= _settings.Value.combatFocus.worldSpeedMult;
-            spellCopy.Effects[0].Data!.Duration = (int)Math.Round(spellCopy.Effects[0].Data!.Duration * _settings.Value.combatFocus.durationMult);
-            
+            spellCopy.Effects[0].Data!.Duration =
+                (int) Math.Round(spellCopy.Effects[0].Data!.Duration * _settings.Value.combatFocus.durationMult);
+
             spellCopy = CopySpell(state, Engarde.ASpell.MCT_PowerAttackedSlow01TimeSpell);
             spellCopy.Effects[0].Data!.Magnitude *= _settings.Value.combatFocus.worldSpeedMult;
-            spellCopy.Effects[0].Data!.Duration = (int)Math.Round(spellCopy.Effects[0].Data!.Duration * _settings.Value.combatFocus.durationMult);
+            spellCopy.Effects[0].Data!.Duration =
+                (int) Math.Round(spellCopy.Effects[0].Data!.Duration * _settings.Value.combatFocus.durationMult);
 
             if (_settings.Value.npcSettings.giantTweaks)
             {
@@ -2582,6 +2584,7 @@ namespace Engarde_Synthesis
                             Data = staggerData
                         });
                     }
+
                     spellCopy = CopySpell(state, Skyrim.ASpell.AbWerewolf);
 
                     if (!containsGrowl)
@@ -2675,24 +2678,29 @@ namespace Engarde_Synthesis
                 }
             }
         }
-        
+
         private static void PatchWeaponSpeedEffects(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             foreach (IMagicEffectGetter effect in state.LoadOrder.PriorityOrder.WinningOverrides<IMagicEffectGetter>())
             {
-                if (effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult || effect.SecondActorValue == ActorValue.WeaponSpeedMult) {
+                if (effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult ||
+                    effect.SecondActorValue == ActorValue.WeaponSpeedMult)
+                {
                     _weaponSpeedEffects.Add(effect.FormKey);
                 }
-                if (effect.Archetype.ActorValue == ActorValue.LeftWeaponSpeedMultiply || effect.SecondActorValue == ActorValue.LeftWeaponSpeedMultiply) {
-                    
+
+                if (effect.Archetype.ActorValue == ActorValue.LeftWeaponSpeedMultiply ||
+                    effect.SecondActorValue == ActorValue.LeftWeaponSpeedMultiply)
+                {
                     _leftWeaponSpeedEffects.Add(effect.FormKey);
                 }
             }
         }
-        
+
         private static void PatchWeaponSpeedSpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            if (!_settings.Value.fixAttackSpeed) {
+            if (!_settings.Value.fixAttackSpeed)
+            {
                 return;
             }
 
@@ -2702,7 +2710,10 @@ namespace Engarde_Synthesis
                 {
                     effect.Data!.Magnitude -= 1;
                 }
-                static bool Predicate(IEffectGetter x) => (_weaponSpeedEffects.Contains(x.BaseEffect.FormKey) || _leftWeaponSpeedEffects.Contains(x.BaseEffect.FormKey)) && x.Data?.Magnitude > 1;
+
+                static bool Predicate(IEffectGetter x) =>
+                    (_weaponSpeedEffects.Contains(x.BaseEffect.FormKey) ||
+                     _leftWeaponSpeedEffects.Contains(x.BaseEffect.FormKey)) && x.Data?.Magnitude > 1;
 
                 bool haveWeaponSpeedEffect = spell.Effects.Any(Predicate);
                 if (haveWeaponSpeedEffect)
@@ -2710,6 +2721,88 @@ namespace Engarde_Synthesis
                     var spellCopy = state.PatchMod.Spells.GetOrAddAsOverride(spell);
                     spellCopy.Effects.Where(Predicate).ForEach(PatchSpell);
                 }
+            }
+        }
+
+        private static void PatchProjectiles(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            if (_settings.Value.npcSettings.dragonTweaks)
+            {
+                IProjectileGetter projectile =
+                    state.LinkCache.Resolve<IProjectileGetter>(Skyrim.Projectile.DragonFrostProjectile01);
+                var projectileCopy = state.PatchMod.Projectiles.GetOrAddAsOverride(projectile);
+                projectileCopy.Model = new Model
+                {
+                    File = "Magic\\FXFrostBallWispyProjectile.nif"
+                };
+                projectileCopy.Type = Projectile.TypeEnum.Missile;
+                projectileCopy.Speed = 500;
+                projectileCopy.CollisionRadius = 20;
+
+                // frost ball project, slower, bigger radius
+                projectile =
+                    state.LinkCache.Resolve<IProjectileGetter>(Skyrim.Projectile.DragonFrostBallWispyProjectile);
+                projectileCopy = state.PatchMod.Projectiles.GetOrAddAsOverride(projectile);
+                projectileCopy.Speed = 600;
+                projectileCopy.CollisionRadius = 20;
+            }
+        }
+
+        private static void PatchMovement(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            static IMovementType CopyMovt(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, FormKey formKey)
+            {
+                var movt = state.LinkCache.Resolve<IMovementTypeGetter>(formKey);
+                return state.PatchMod.MovementTypes.GetOrAddAsOverride(movt);
+            }
+
+            static void ChangeMovt(IMovementType movt, int speed, int forwardSpeed)
+            {
+                movt.LeftRun = speed;
+                movt.RightRun = speed;
+                movt.BackRun = speed;
+                movt.ForwardRun = speed + forwardSpeed;
+            }
+
+            if (_settings.Value.movementSettings.patchSpeed)
+            {
+                IMovementType movtCopy = CopyMovt(state, Skyrim.MovementType.NPC_1HM_MT);
+                ChangeMovt(movtCopy, _settings.Value.movementSettings.oneHandSpeed, 70);
+
+                movtCopy = CopyMovt(state, Skyrim.MovementType.NPC_2HM_MT);
+                ChangeMovt(movtCopy, _settings.Value.movementSettings.twoHandSpeed, 100);
+
+                movtCopy = CopyMovt(state, Skyrim.MovementType.NPC_Bow_MT);
+                ChangeMovt(movtCopy, _settings.Value.movementSettings.bowSpeed, 50);
+            }
+
+            if (_settings.Value.movementSettings.attackCommitment)
+            {
+                var movtCopy = CopyMovt(state, Skyrim.MovementType.NPC_Attacking_MT);
+                movtCopy.LeftWalk = 30;
+                movtCopy.LeftRun = 30;
+                movtCopy.RightWalk = 30;
+                movtCopy.RightRun = 30;
+                movtCopy.ForwardWalk = 30;
+                movtCopy.ForwardRun = 235;
+                movtCopy.BackWalk = 30;
+                movtCopy.BackRun = 30;
+                movtCopy.RotateInPlaceWalk = 60;
+                movtCopy.RotateInPlaceRun = 60;
+                movtCopy.RotateWhileMovingRun = 60;
+
+                movtCopy = CopyMovt(state, Skyrim.MovementType.NPC_Attacking2H_MT);
+                movtCopy.LeftWalk = 10;
+                movtCopy.LeftRun = 10;
+                movtCopy.RightWalk = 10;
+                movtCopy.RightRun = 10;
+                movtCopy.ForwardWalk = 10;
+                movtCopy.ForwardRun = 235;
+                movtCopy.BackWalk = 10;
+                movtCopy.BackRun = 10;
+                movtCopy.RotateInPlaceWalk = 30;
+                movtCopy.RotateInPlaceRun = 30;
+                movtCopy.RotateWhileMovingRun = 30;
             }
         }
         #endregion
@@ -2734,30 +2827,7 @@ namespace Engarde_Synthesis
             PatchWeaponSpeedEffects(state);
             PatchWeaponSpeedSpell(state);
             PatchProjectiles(state);
-        }
-
-        private static void PatchProjectiles(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
-        {
-            if (_settings.Value.npcSettings.dragonTweaks)
-            {
-                IProjectileGetter projectile =
-                    state.LinkCache.Resolve<IProjectileGetter>(Skyrim.Projectile.DragonFrostProjectile01);
-                var projectileCopy = state.PatchMod.Projectiles.GetOrAddAsOverride(projectile);
-                projectileCopy.Model = new Model
-                {
-                    File = "Magic\\FXFrostBallWispyProjectile.nif"
-                };
-                projectileCopy.Type = Projectile.TypeEnum.Missile;
-                projectileCopy.Speed = 500;
-                projectileCopy.CollisionRadius = 20;
-                
-                // frost ball project, slower, bigger radius
-                projectile =
-                    state.LinkCache.Resolve<IProjectileGetter>(Skyrim.Projectile.DragonFrostBallWispyProjectile);
-                projectileCopy = state.PatchMod.Projectiles.GetOrAddAsOverride(projectile);
-                projectileCopy.Speed = 600;
-                projectileCopy.CollisionRadius = 20;
-            }
+            PatchMovement(state);
         }
     }
 }
