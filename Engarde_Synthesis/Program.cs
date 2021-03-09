@@ -792,6 +792,7 @@ namespace Engarde_Synthesis
                         ChangeWeapon(weaponCopy, 12, critMult: 0.5f);
                         break;
                     case WeaponAnimationType.TwoHandSword:
+                    case WeaponAnimationType.TwoHandAxe when weaponCopy.Keywords?.Contains(Skyrim.Keyword.WeapTypeGreatsword) ?? false:
                         ChangeWeapon(weaponCopy, 14, 0.9f, 1.15f, staggerMult: 1.35f, critChance: WeaponCritChance.Low,
                             armorPenetration: WeaponArmorPenetration.Weak);
                         break;
@@ -800,9 +801,8 @@ namespace Engarde_Synthesis
                         ChangeWeapon(weaponCopy, 18, 0.9f, speedMult: 0.9f, critMult: 0.5f, staggerMult: 1.65f,
                             armorPenetration: WeaponArmorPenetration.Strong);
                         break;
-                    case WeaponAnimationType.TwoHandAxe
-                        when weaponCopy.Keywords?.Contains(Skyrim.Keyword.WeapTypeBattleaxe) ?? false:
-                    {
+                    case WeaponAnimationType.TwoHandAxe:
+                    {   
                         ChangeWeapon(weaponCopy, 16, reachMult: 0.8f, speedMult: 1.1f, staggerMult: 1.5f,
                             armorPenetration: WeaponArmorPenetration.Strong);
                         break;
@@ -1516,14 +1516,15 @@ namespace Engarde_Synthesis
 
                 if (!( /*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
                       || npcRaceEdid == "AlduinRace" ||*/ npcRaceEdid.Contains("GiantRace") ||
-                                                          npcRaceEdid.Contains("LurkerRace")))
+                                                          npcRaceEdid.Contains("LurkerRace") || npc.Attacks.Count != 0))
                 {
                     continue;
                 }
 
                 if (_settings.Value.staggerSettings.weaponStagger)
                 {
-                    INpc npcCopy = state.PatchMod.Npcs.GetOrAddAsOverride(npc);
+                    Npc npcCopy = npc.DeepCopy();
+                    bool changed = false;
                     npcCopy.Attacks.ForEach(attack =>
                     {
                         if (!IsValidAttack(attack)) return;
@@ -1531,8 +1532,13 @@ namespace Engarde_Synthesis
                             !attack.AttackData.Flags.HasFlag(AttackData.Flag.BashAttack))
                         {
                             attack.AttackData.Spell = Engarde.ASpell.MCT_NormalAttackSpell;
+                            changed = true;
                         }
                     });
+                    if (changed)
+                    {
+                        state.PatchMod.Npcs.Set(npcCopy);
+                    }
                 }
 
                 if (npcRaceEdid.Contains("GiantRace") || npcRaceEdid.Contains("LurkerRace"))
@@ -1914,7 +1920,7 @@ namespace Engarde_Synthesis
                 {
                     Condition wantToSneak = new ConditionFloat
                     {
-                        CompareOperator = CompareOperator.EqualTo,
+                        CompareOperator = CompareOperator.NotEqualTo,
                         ComparisonValue = 1,
                         Data = new FunctionConditionData
                         {
@@ -2516,9 +2522,14 @@ namespace Engarde_Synthesis
                     savageSkyrimSpells.ForEach(x =>
                         x.Effects.RemoveAll(effect =>
                             effect.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_Stagger));
+
+                    savageSkyrimSpells.ForEach(AddStaggerEffects);
+
                     ISpell powerStaggerSpell = CopySpell(state, SavageSkyrim.ASpell.__AA_Animal_ForceThrow_Small);
+
                     powerStaggerSpell.Effects.RemoveAll(x =>
                         x.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_ForceThrow_2);
+
                     AddPowerStaggerEffects(powerStaggerSpell);
                 }
 
@@ -2609,8 +2620,8 @@ namespace Engarde_Synthesis
                     {
                         spellCopy = CopySpell(state, Dragonborn.ASpell.DLC2AbWerebear);
 
-                        spellCopy.Effects[1].Data!.Magnitude = 300;
-                        spellCopy.Effects[2].Data!.Magnitude = 400;
+                        spellCopy.Effects[3].Data!.Magnitude = 300;
+                        spellCopy.Effects[4].Data!.Magnitude = 400;
 
                         spellCopy.Effects.Add(new Effect
                         {
@@ -2806,6 +2817,7 @@ namespace Engarde_Synthesis
                 movtCopy.RotateWhileMovingRun = 30;
             }
         }
+
         #endregion
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
