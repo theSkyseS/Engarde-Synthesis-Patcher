@@ -2689,6 +2689,29 @@ namespace Engarde_Synthesis
                 }
             }
         }
+        
+        private static void PatchWeaponSpeedSpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        {
+            if (!_settings.Value.fixAttackSpeed) {
+                return;
+            }
+
+            foreach (ISpellGetter spell in state.LoadOrder.PriorityOrder.WinningOverrides<ISpellGetter>())
+            {
+                static void PatchSpell(IEffect effect)
+                {
+                    effect.Data!.Magnitude -= 1;
+                }
+                static bool Predicate(IEffectGetter x) => (_weaponSpeedEffects.Contains(x.BaseEffect.FormKey) || _leftWeaponSpeedEffects.Contains(x.BaseEffect.FormKey)) && x.Data?.Magnitude > 1;
+
+                bool haveWeaponSpeedEffect = spell.Effects.Any(Predicate);
+                if (haveWeaponSpeedEffect)
+                {
+                    var spellCopy = state.PatchMod.Spells.GetOrAddAsOverride(spell);
+                    spellCopy.Effects.Where(Predicate).ForEach(PatchSpell);
+                }
+            }
+        }
         #endregion
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -2709,30 +2732,13 @@ namespace Engarde_Synthesis
             PatchEffects(state);
             PatchSpells(state);
             PatchWeaponSpeedEffects(state);
-
-            PatchweaponSpeedSpell(state);
+            PatchWeaponSpeedSpell(state);
         }
 
         private static void PatchweaponSpeedSpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             if (!_settings.Value.fixAttackSpeed) {
                 return;
-            }
-
-            foreach (ISpellGetter spell in state.LoadOrder.PriorityOrder.WinningOverrides<ISpellGetter>())
-            {
-                static void PatchSpell(IEffect effect)
-                {
-                    effect.Data!.Magnitude -= 1;
-                }
-                static bool Predicate(IEffectGetter x) => (_weaponSpeedEffects.Contains(x.BaseEffect.FormKey) || _leftWeaponSpeedEffects.Contains(x.BaseEffect.FormKey)) && x.Data?.Magnitude > 1;
-
-                bool haveWeaponSpeedEffect = spell.Effects.Any(Predicate);
-                if (haveWeaponSpeedEffect)
-                {
-                    var spellCopy = state.PatchMod.Spells.GetOrAddAsOverride(spell);
-                    spellCopy.Effects.Where(Predicate).ForEach(PatchSpell);
-                }
             }
         }
     }
