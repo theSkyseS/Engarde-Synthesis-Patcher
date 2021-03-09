@@ -2733,12 +2733,30 @@ namespace Engarde_Synthesis
             PatchSpells(state);
             PatchWeaponSpeedEffects(state);
             PatchWeaponSpeedSpell(state);
+            PatchProjectiles(state);
         }
 
-        private static void PatchweaponSpeedSpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        private static void PatchProjectiles(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            if (!_settings.Value.fixAttackSpeed) {
-                return;
+            if (_settings.Value.npcSettings.dragonTweaks)
+            {
+                IProjectileGetter projectile =
+                    state.LinkCache.Resolve<IProjectileGetter>(Skyrim.Projectile.DragonFrostProjectile01);
+                var projectileCopy = state.PatchMod.Projectiles.GetOrAddAsOverride(projectile);
+                projectileCopy.Model = new Model
+                {
+                    File = "Magic\\FXFrostBallWispyProjectile.nif"
+                };
+                projectileCopy.Type = Projectile.TypeEnum.Missile;
+                projectileCopy.Speed = 500;
+                projectileCopy.CollisionRadius = 20;
+                
+                // frost ball project, slower, bigger radius
+                projectile =
+                    state.LinkCache.Resolve<IProjectileGetter>(Skyrim.Projectile.DragonFrostBallWispyProjectile);
+                projectileCopy = state.PatchMod.Projectiles.GetOrAddAsOverride(projectile);
+                projectileCopy.Speed = 600;
+                projectileCopy.CollisionRadius = 20;
             }
         }
     }
