@@ -17,8 +17,6 @@ namespace Engarde_Synthesis
 
         private static Lazy<Settings.Settings> _settings = null!;
         private static bool _foundAnotherSneakRootChild;
-        private static List<FormKey> _weaponSpeedEffects = new();
-        private static List<FormKey> _leftWeaponSpeedEffects = new();
 
         #endregion
 
@@ -56,6 +54,11 @@ namespace Engarde_Synthesis
 
         #region Auxiliary Methods
 
+        /**
+         <summary>
+          Changes value of short global by FormKey
+         </summary>
+        */
         private static void ChangeGlobalShortValue(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
             FormKey globalKey, int value)
         {
@@ -64,13 +67,23 @@ namespace Engarde_Synthesis
             globalCopy.Data = (short) value;
         }
 
-        private static void AddKeyword(IKeyworded<IKeywordGetter> keyworded, FormKey keywordForm)
+        /**
+         <summary>
+          Adds a keyword to IKeyworded object
+         </summary>
+        */
+        private static void AddKeyword(this IKeyworded<IKeywordGetter> keyworded, FormKey keywordForm)
         {
             keyworded.Keywords ??= new ExtendedList<IFormLink<IKeywordGetter>>();
             keyworded.Keywords.Add(keywordForm);
         }
 
-        private static void SetStagger(IWeapon weaponCopy, int defaultWeight, float multiplier)
+        /**
+         <summary>
+          Calculates Stagger stat for weapon based on it's weight and specified multiplier
+         </summary>
+        */
+        private static void SetStagger(this IWeapon weaponCopy, int defaultWeight, float multiplier)
         {
             float weight = weaponCopy.BasicStats!.Weight;
             if (weight <= 0)
@@ -81,10 +94,18 @@ namespace Engarde_Synthesis
             weaponCopy.Data!.Stagger = weight * 0.01f * multiplier;
         }
 
-        private static void ChangeWeapon(IWeapon weaponCopy, int defaultWeight, float damageMult = 1,
-            float reachMult = 1, float speedMult = 1, float critMult = 1, float staggerMult = 1,
-            WeaponCritChance critChance = WeaponCritChance.None,
-            WeaponArmorPenetration armorPenetration = WeaponArmorPenetration.None)
+        /**
+         <summary>
+          Changes stats of specified weapon <br/>
+          All parameters except <paramref name="weaponCopy"/> and <paramref name="defaultWeight"/> are optional <br/> 
+         </summary>
+        */
+        private static void ChangeWeapon(this IWeapon weaponCopy, int defaultWeight, float damageMult = 1,
+                float reachMult = 1, float speedMult = 1, float critMult = 1, float staggerMult = 1,
+                WeaponCritChance critChance = WeaponCritChance.None,
+                WeaponArmorPenetration armorPenetration = WeaponArmorPenetration.None)
+            // is this method needed?
+            // or is it better to do it in place?
         {
             FormKey critKey = critChance switch
             {
@@ -95,24 +116,24 @@ namespace Engarde_Synthesis
             };
             if (!critKey.IsNull)
             {
-                AddKeyword(weaponCopy, critKey);
+                weaponCopy.AddKeyword(critKey);
             }
 
 
             if (weaponCopy.Data!.Flags.HasFlag(WeaponData.Flag.BoundWeapon))
             {
                 weaponCopy.BasicStats!.Weight = defaultWeight;
-                AddKeyword(weaponCopy, Engarde.Keyword.MCT_PenetratesArmorKW);
+                weaponCopy.AddKeyword(Engarde.Keyword.MCT_PenetratesArmorKW);
             }
             else
             {
                 switch (armorPenetration)
                 {
                     case WeaponArmorPenetration.Weak:
-                        AddKeyword(weaponCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
+                        weaponCopy.AddKeyword(Engarde.Keyword.MCT_WeakAgainstArmored);
                         break;
                     case WeaponArmorPenetration.Strong:
-                        AddKeyword(weaponCopy, Engarde.Keyword.MCT_PenetratesArmorKW);
+                        weaponCopy.AddKeyword(Engarde.Keyword.MCT_PenetratesArmorKW);
                         break;
                 }
             }
@@ -120,24 +141,49 @@ namespace Engarde_Synthesis
             weaponCopy.BasicStats!.Damage = (ushort) Math.Round(weaponCopy.BasicStats.Damage * damageMult);
             weaponCopy.Data.Speed *= speedMult;
             weaponCopy.Data.Reach *= reachMult;
-            SetStagger(weaponCopy, defaultWeight, staggerMult);
+            weaponCopy.SetStagger(defaultWeight, staggerMult);
             weaponCopy.Critical!.Damage = (ushort) Math.Round(weaponCopy.BasicStats!.Damage *
                                                               _settings.Value.weaponSettings.weaponCritDamageMult *
                                                               critMult);
         }
 
+        /**
+         <summary>
+          Checks if Attack has AttackData, Stagger and AttackEvent
+         </summary>
+        */
         private static bool IsValidAttack(IAttackGetter attack)
         {
             return attack.AttackData?.Stagger != null && !attack.AttackEvent.IsNullOrEmpty();
         }
 
-        private static void ChangeBasicAttackStats(IAttack attack, int strikeAngle = -1, float strikeChance = float.NaN,
-            float damageMult = 0, float attackAngle = float.NaN)
+        /**
+         <summary>
+          Copies winning override of Idle Animation into patch by using FormKey
+         </summary>
+         */
+        private static IIdleAnimation CopyIdle(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, FormKey idleKey)
+        {
+            var idle = state.LinkCache.Resolve<IIdleAnimationGetter>(idleKey);
+            IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+            return idleCopy;
+        }
+
+        /**
+         <summary>
+          Changes basic stats of specified attack <br/>
+          All parameters except attack are optional <br/> 
+         </summary>
+        */
+        private static void ChangeBasicAttackStats(IAttack attack, int? strikeAngle = null,
+                float attackChance = float.NaN,
+                float damageMult = 0, float attackAngle = float.NaN)
+            //another method just to reduce lines of code(since it have 61 usage =D)
         {
             attack.AttackData!.DamageMult += damageMult;
-            if (strikeAngle != -1)
+            if (strikeAngle != null)
             {
-                attack.AttackData.StrikeAngle = strikeAngle;
+                attack.AttackData.StrikeAngle = (float) strikeAngle;
             }
 
             if (!float.IsNaN(attackAngle))
@@ -145,9 +191,9 @@ namespace Engarde_Synthesis
                 attack.AttackData.AttackAngle = attackAngle;
             }
 
-            if (!float.IsNaN(strikeChance))
+            if (!float.IsNaN(attackChance))
             {
-                attack.AttackData.Chance = strikeChance;
+                attack.AttackData.Chance = attackChance;
             }
         }
 
@@ -157,48 +203,50 @@ namespace Engarde_Synthesis
             string attackEvent = attack.AttackEvent!;
             attack.AttackData!.Knockdown = 0;
 
-            if (attackEvent == "AttackStartH2HRight")
+            switch (attackEvent)
             {
-                ChangeBasicAttackStats(attack, 45);
-                attack.AttackData.AttackType = Engarde.Keyword.MCT_NormalAttackRight;
-            }
-            else if (attackEvent == "AttackStartH2HLeft")
-            {
-                ChangeBasicAttackStats(attack, 45);
-                attack.AttackData.AttackType = Engarde.Keyword.MCT_NormalAttackLeft;
-            }
-            else if (attack.AttackData.Spell.IsNull)
-            {
-                if ((attackEvent.Contains("PowerStartLeft") || attackEvent.Contains("PowerStartRight")) &&
-                    _settings.Value.basicAttacks.basicAttackTweaks)
+                case "AttackStartH2HRight":
+                    ChangeBasicAttackStats(attack, 45);
+                    attack.AttackData.AttackType = Engarde.Keyword.MCT_NormalAttackRight;
+                    break;
+                case "AttackStartH2HLeft":
+                    ChangeBasicAttackStats(attack, 45);
+                    attack.AttackData.AttackType = Engarde.Keyword.MCT_NormalAttackLeft;
+                    break;
+                default:
                 {
-                    attack.AttackData.Spell = Engarde.ASpell.MCT_SidePowerAttackSpell;
-                }
-                else if ((attackEvent == "attackPowerStartBackward" || attackEvent == "attackPowerStartBackLeftHand") &&
-                         _settings.Value.powerAttacks.powerAttackTweaks)
-                {
-                    attack.AttackData.Spell = Engarde.ASpell.MCT_BackPowerAttackSpell;
-                }
-                else if (attack.AttackData.Flags.HasFlag(AttackData.Flag.BashAttack) &&
-                         _settings.Value.basicAttacks.basicAttackTweaks)
-                {
-                    if (attack.AttackData.Flags.HasFlag(AttackData.Flag.PowerAttack))
+                    if (attack.AttackData.Spell.IsNull)
                     {
-                        attack.AttackData.Spell = Engarde.ASpell.MCT_PowerBashAttackSpell;
+                        if ((attackEvent.Contains("PowerStartLeft") || attackEvent.Contains("PowerStartRight")) &&
+                            _settings.Value.basicAttacks.basicAttackTweaks)
+                        {
+                            attack.AttackData.Spell = Engarde.ASpell.MCT_SidePowerAttackSpell;
+                        }
+                        else if ((attackEvent == "attackPowerStartBackward" ||
+                                  attackEvent == "attackPowerStartBackLeftHand") &&
+                                 _settings.Value.powerAttacks.powerAttackTweaks)
+                        {
+                            attack.AttackData.Spell = Engarde.ASpell.MCT_BackPowerAttackSpell;
+                        }
+                        else if (attack.AttackData.Flags.HasFlag(AttackData.Flag.BashAttack) &&
+                                 _settings.Value.basicAttacks.basicAttackTweaks)
+                        {
+                            attack.AttackData.Spell = attack.AttackData.Flags.HasFlag(AttackData.Flag.PowerAttack)
+                                ? Engarde.ASpell.MCT_PowerBashAttackSpell
+                                : Engarde.ASpell.MCT_BashAttackSpell;
+                        }
+                        else if (attack.AttackData.Flags.HasFlag(AttackData.Flag.PowerAttack) &&
+                                 _settings.Value.staggerSettings.weaponStagger)
+                        {
+                            attack.AttackData.Spell = Engarde.ASpell.MCT_PowerAttackSpell;
+                        }
+                        else if (_settings.Value.staggerSettings.weaponStagger)
+                        {
+                            attack.AttackData.Spell = Engarde.ASpell.MCT_NormalAttackSpell;
+                        }
                     }
-                    else
-                    {
-                        attack.AttackData.Spell = Engarde.ASpell.MCT_BashAttackSpell;
-                    }
-                }
-                else if (attack.AttackData.Flags.HasFlag(AttackData.Flag.PowerAttack) &&
-                         _settings.Value.staggerSettings.weaponStagger)
-                {
-                    attack.AttackData.Spell = Engarde.ASpell.MCT_PowerAttackSpell;
-                }
-                else if (_settings.Value.staggerSettings.weaponStagger)
-                {
-                    attack.AttackData.Spell = Engarde.ASpell.MCT_NormalAttackSpell;
+
+                    break;
                 }
             }
 
@@ -289,18 +337,18 @@ namespace Engarde_Synthesis
             switch (attackEvent)
             {
                 case "attackPowerStart_ForwardPowerAttack_R1":
-                    ChangeBasicAttackStats(attack, strikeChance: 5);
+                    ChangeBasicAttackStats(attack, attackChance: 5);
                     attack.AttackData.AttackType = FormLink<IKeywordGetter>.Null;
                     break;
                 case "attackPowerStart_PowerAttack_L1":
-                    ChangeBasicAttackStats(attack, strikeChance: 0.7f, attackAngle: -15);
+                    ChangeBasicAttackStats(attack, attackChance: 0.7f, attackAngle: -15);
                     break;
                 case "attackStart_Attack_L1":
-                    ChangeBasicAttackStats(attack, strikeChance: 1, attackAngle: -25, damageMult: 0.5f);
+                    ChangeBasicAttackStats(attack, attackChance: 1, attackAngle: -25, damageMult: 0.5f);
                     attack.AttackData.Flags |= AttackData.Flag.PowerAttack;
                     break;
                 case "attackStart_Attack_R1":
-                    ChangeBasicAttackStats(attack, strikeAngle: 25, strikeChance: 1, damageMult: 0.5f, attackAngle: 5);
+                    ChangeBasicAttackStats(attack, strikeAngle: 25, attackChance: 1, damageMult: 0.5f, attackAngle: 5);
                     attack.AttackData.Flags |= AttackData.Flag.PowerAttack;
                     break;
                 case "bashPowerStart":
@@ -320,14 +368,9 @@ namespace Engarde_Synthesis
             attack.AttackData!.Knockdown = 0;
             if (isWerebeast)
             {
-                if (growlEnabled)
-                {
-                    attack.AttackData.Spell = Growl.ASpell.HRI_Werewolf_Spell_Attack;
-                }
-                else
-                {
-                    attack.AttackData.Spell = Engarde.ASpell.MCT_NormalAttackSpell;
-                }
+                attack.AttackData.Spell = growlEnabled
+                    ? Growl.ASpell.HRI_Werewolf_Spell_Attack
+                    : Engarde.ASpell.MCT_NormalAttackSpell;
             }
 
             switch (attackEvent)
@@ -667,13 +710,6 @@ namespace Engarde_Synthesis
             }
         }
 
-        private static IIdleAnimation CopyIdle(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, FormKey idleKey)
-        {
-            var idle = state.LinkCache.Resolve<IIdleAnimationGetter>(idleKey);
-            IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-            return idleCopy;
-        }
-
         #endregion
 
         #region Patcher Methods
@@ -766,57 +802,58 @@ namespace Engarde_Synthesis
                         if (weaponCopy.Data.Flags.HasFlag(WeaponData.Flag.BoundWeapon))
                         {
                             weaponCopy.BasicStats.Weight = 2;
-                            AddKeyword(weaponCopy, Engarde.Keyword.MCT_PenetratesArmorKW);
+                            weaponCopy.AddKeyword(Engarde.Keyword.MCT_PenetratesArmorKW);
                         }
 
                         if (weaponCopy.EditorID == "HRI_Lycan_Weapon_UnarmedWereformWeapon")
                         {
                             weaponCopy.BasicStats.Weight = 4;
-                            AddKeyword(weaponCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
+                            weaponCopy.AddKeyword(Engarde.Keyword.MCT_WeakAgainstArmored);
                         }
 
                         break;
                     }
                     case WeaponAnimationType.OneHandSword:
-                        ChangeWeapon(weaponCopy, 8, reachMult: 1.15f, staggerMult: 0.85f,
+                        weaponCopy.ChangeWeapon(8, reachMult: 1.15f, staggerMult: 0.85f,
                             critChance: WeaponCritChance.Medium, armorPenetration: WeaponArmorPenetration.Weak);
                         break;
                     case WeaponAnimationType.OneHandDagger:
-                        ChangeWeapon(weaponCopy, 3, critMult: 2, critChance: WeaponCritChance.High,
+                        weaponCopy.ChangeWeapon(3, critMult: 2, critChance: WeaponCritChance.High,
                             armorPenetration: WeaponArmorPenetration.Weak);
                         break;
                     case WeaponAnimationType.OneHandAxe:
-                        ChangeWeapon(weaponCopy, 10, 1.1f, 0.8f, 1.1f);
+                        weaponCopy.ChangeWeapon(10, 1.1f, 0.8f, 1.1f);
                         break;
                     case WeaponAnimationType.OneHandMace:
-                        ChangeWeapon(weaponCopy, 12, critMult: 0.5f);
+                        weaponCopy.ChangeWeapon(12, critMult: 0.5f);
                         break;
                     case WeaponAnimationType.TwoHandSword:
-                    case WeaponAnimationType.TwoHandAxe when weaponCopy.Keywords?.Contains(Skyrim.Keyword.WeapTypeGreatsword) ?? false:
-                        ChangeWeapon(weaponCopy, 14, 0.9f, 1.15f, staggerMult: 1.35f, critChance: WeaponCritChance.Low,
+                    case WeaponAnimationType.TwoHandAxe
+                        when weaponCopy.Keywords?.Contains(Skyrim.Keyword.WeapTypeGreatsword) ?? false:
+                        weaponCopy.ChangeWeapon(14, 0.9f, 1.15f, staggerMult: 1.35f, critChance: WeaponCritChance.Low,
                             armorPenetration: WeaponArmorPenetration.Weak);
                         break;
                     case WeaponAnimationType.TwoHandAxe
                         when weaponCopy.Keywords?.Contains(Skyrim.Keyword.WeapTypeWarhammer) ?? false:
-                        ChangeWeapon(weaponCopy, 18, 0.9f, speedMult: 0.9f, critMult: 0.5f, staggerMult: 1.65f,
+                        weaponCopy.ChangeWeapon(18, 0.9f, speedMult: 0.9f, critMult: 0.5f, staggerMult: 1.65f,
                             armorPenetration: WeaponArmorPenetration.Strong);
                         break;
                     case WeaponAnimationType.TwoHandAxe:
-                    {   
-                        ChangeWeapon(weaponCopy, 16, reachMult: 0.8f, speedMult: 1.1f, staggerMult: 1.5f,
+                    {
+                        weaponCopy.ChangeWeapon(16, reachMult: 0.8f, speedMult: 1.1f, staggerMult: 1.5f,
                             armorPenetration: WeaponArmorPenetration.Strong);
                         break;
                     }
                     case WeaponAnimationType.Crossbow:
                     case WeaponAnimationType.Bow when weaponCopy.EditorID?.ToLower().Contains("crossbow") ?? false:
-                        ChangeWeapon(weaponCopy, 12, critMult: 2, staggerMult: 1.5f,
+                        weaponCopy.ChangeWeapon(12, critMult: 2, staggerMult: 1.5f,
                             armorPenetration: WeaponArmorPenetration.Strong);
                         break;
                     case WeaponAnimationType.Bow:
-                        ChangeWeapon(weaponCopy, 8, armorPenetration: WeaponArmorPenetration.Weak);
+                        weaponCopy.ChangeWeapon(8, armorPenetration: WeaponArmorPenetration.Weak);
                         break;
                     case WeaponAnimationType.Staff:
-                        ChangeWeapon(weaponCopy, 8, reachMult: 1.15f, critMult: 0.5f,
+                        weaponCopy.ChangeWeapon(8, reachMult: 1.15f, critMult: 0.5f,
                             armorPenetration: WeaponArmorPenetration.Weak);
                         break;
                 }
@@ -859,17 +896,17 @@ namespace Engarde_Synthesis
 
                 if (raceCopy.HasKeyword("ActorTypeUndead", state.LinkCache))
                 {
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                    AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
+                    raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                    raceCopy.AddKeyword(Engarde.Keyword.MCT_NoStamina);
                 }
 
                 switch (behavior)
                 {
                     case "Actors\\AtronachFlame\\AtronachFlame.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_NoStamina);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
 
                         // base adjustment from vanilla
                         raceCopy.BaseMass = 2;
@@ -878,9 +915,9 @@ namespace Engarde_Synthesis
                     case "Actors\\AtronachFrost\\AtronachFrostProject.hkx":
                     {
                         raceCopy.ActorEffect.Remove(Engarde.ASpell.MCT_DefaultRaceSpell);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_ArmoredKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_NoStamina);
                         if (_settings.Value.npcSettings.addArmorToArmored)
                         {
                             raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor500);
@@ -894,16 +931,16 @@ namespace Engarde_Synthesis
                             (raceCopy.EditorID?.StartsWith("DwaSp") ?? false) &&
                             (raceCopy.EditorID?.Contains("Cleaner") ?? false))
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist4);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower3);
 
                             raceCopy.BaseMass = 8;
                             raceCopy.UnarmedDamage = 50 * _settings.Value.npcSettings.unarmedDamageMult;
                         }
                         else
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist3);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist3);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower3);
 
                             raceCopy.BaseMass = 6;
                             raceCopy.UnarmedDamage = 40 * _settings.Value.npcSettings.unarmedDamageMult;
@@ -912,20 +949,20 @@ namespace Engarde_Synthesis
                         break;
                     }
                     case "Actors\\AtronachStorm\\AtronachStormProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_NoStamina);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
 
                         raceCopy.BaseMass = 4;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 160;
                         break;
                     case "Actors\\Bear\\BearProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_PaddedKW);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryBleed);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_PaddedKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_InjuryBleed);
 
                         raceCopy.BaseMass = 3.5f;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
@@ -936,8 +973,8 @@ namespace Engarde_Synthesis
                         raceCopy.Attacks.ForEach(SetBearAttackData);
                         break;
                     case "Actors\\DLC02\\BoarRiekling\\BoarProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
 
                         raceCopy.Attacks.ForEach(x =>
                         {
@@ -946,8 +983,8 @@ namespace Engarde_Synthesis
                         });
                         break;
                     case "Actors\\Cow\\HighlandCowProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
                         break;
                     case "Actors\\Chaurus\\ChaurusProject.hkx":
                     {
@@ -956,11 +993,11 @@ namespace Engarde_Synthesis
                             raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
                         }
 
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryKnockDown);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_ArmoredKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_WeakAgainstArmored);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_InjuryKnockDown);
 
                         raceCopy.BaseMass = 2.5f;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
@@ -974,34 +1011,34 @@ namespace Engarde_Synthesis
                             raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
                         }
 
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_ArmoredKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_WeakAgainstArmored);
 
                         raceCopy.BaseMass = 1.5f;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         break;
                     }
                     case "Actors\\Deer\\DeerProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
 
                         raceCopy.AngularAccelerationRate = 1;
                         break;
                     case "Actors\\Canine\\DogProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower0);
 
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         break;
                     case "Actors\\Dragon\\DragonProject.hkx" when _settings.Value.npcSettings.dragonTweaks:
                     {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DragonRaceKW);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower4);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_DragonRaceKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_ArmoredKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_DamagesStamina);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower4);
 
                         if (_settings.Value.npcSettings.addArmorToArmored)
                         {
@@ -1034,7 +1071,7 @@ namespace Engarde_Synthesis
                     }
                     case "Actors\\Draugr\\DraugrProject.hkx":
                     {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
                         raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_NPCRaceSpell);
 
                         raceCopy.BaseMass = 2;
@@ -1043,7 +1080,7 @@ namespace Engarde_Synthesis
 
                         if (raceCopy.EditorID!.Contains("Skeleton"))
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_ArmoredKW);
 
                             if (_settings.Value.npcSettings.addArmorToArmored)
                             {
@@ -1059,11 +1096,11 @@ namespace Engarde_Synthesis
                     }
                     case "Actors\\DLC02\\DwarvenBallistaCenturion\\BallistaCenturion.hkx":
                     {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_DamagesStamina);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_ArmoredKW);
 
                         if (_settings.Value.npcSettings.addArmorToArmored)
                         {
@@ -1077,12 +1114,12 @@ namespace Engarde_Synthesis
                     case "Actors\\DwarvenSteamCenturion\\SteamProject.hkx":
                     {
                         raceCopy.ActorEffect.Remove(Engarde.ASpell.MCT_DefaultRaceSpell);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_KnockDownImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist4);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower3);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_KnockDownImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_DamagesStamina);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_ArmoredKW);
 
                         if (_settings.Value.npcSettings.addArmorToArmored)
                         {
@@ -1097,11 +1134,11 @@ namespace Engarde_Synthesis
                     }
                     case "Actors\\DwarvenSphereCenturion\\SphereCenturion.hkx":
                     {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryStun);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_InjuryStun);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_ArmoredKW);
                         if (_settings.Value.npcSettings.addArmorToArmored)
                         {
                             raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
@@ -1114,11 +1151,11 @@ namespace Engarde_Synthesis
                         break;
                     }
                     case "Actors\\DwarvenSpider\\DwarvenSpiderCenturionProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_ArmoredKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_WeakAgainstArmored);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_ArmoredKW);
                         if (_settings.Value.npcSettings.addArmorToArmored)
                         {
                             raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
@@ -1129,15 +1166,15 @@ namespace Engarde_Synthesis
                         raceCopy.UnarmedReach = 77;
                         break;
                     case "Actors\\DragonPriest\\Dragon_Priest.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
 
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 64;
                         break;
                     case "Actors\\Falmer\\FalmerProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryAttackSpeed);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_InjuryAttackSpeed);
                         raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_NPCRaceSpell);
 
                         raceCopy.BaseMass = 1.5f;
@@ -1147,30 +1184,30 @@ namespace Engarde_Synthesis
                         break;
                     case "Actors\\FrostbiteSpider\\FrostbiteSpiderProject.hkx":
                     {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryKnockDown);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_WeakAgainstArmored);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_InjuryKnockDown);
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 77;
                         if (raceCopy.EditorID!.Contains("Giant"))
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
                             raceCopy.BaseMass = 3;
                             var spellFormKey = Skyrim.ASpell.crSpider03PoisonBite;
                             raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
                         }
                         else if (raceCopy.EditorID.Contains("Large"))
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
                             raceCopy.BaseMass = 1;
                             var spellFormKey = Skyrim.ASpell.crSpider02PoisonBite;
                             raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
                         }
                         else
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist0);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower0);
                             raceCopy.BaseMass = 0.2f;
                             var spellFormKey = Skyrim.ASpell.crSpider01PoisonBite;
                             raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
@@ -1183,9 +1220,9 @@ namespace Engarde_Synthesis
                         bool? isGiant = null;
                         if (raceCopy.EditorID!.Contains("Giant"))
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower4);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_DamagesStamina);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist4);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower4);
 
                             raceCopy.BaseMass = 8;
                             raceCopy.Starting[BasicStat.Health] = 2700;
@@ -1195,8 +1232,8 @@ namespace Engarde_Synthesis
                         }
                         else
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist3);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower3);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist3);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower3);
 
                             raceCopy.BaseMass = 6;
                         }
@@ -1206,16 +1243,16 @@ namespace Engarde_Synthesis
                             raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
                         }
 
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_GiantRaceKW);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_KnockDownImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryMoveSpeed);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_GiantRaceKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_KnockDownImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_InjuryMoveSpeed);
 
                         raceCopy.AngularAccelerationRate = 5;
                         if (_settings.Value.npcSettings.giantTweaks)
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaminaControlledKW);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_CanEnrage);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaminaControlledKW);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_CanEnrage);
                             raceCopy.Regen[BasicStat.Stamina] = 1;
                         }
 
@@ -1223,46 +1260,46 @@ namespace Engarde_Synthesis
                         break;
                     }
                     case "Actors\\Goat\\GoatProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower0);
 
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         break;
                     case "Actors\\Hagraven\\HagravenProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 64;
                         break;
                     case "Actors\\Horker\\HorkerProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
 
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 64;
                         break;
                     case "Actors\\Horse\\HorseProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
 
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         break;
                     // humanoid npc races
                     case "Actors\\Character\\DefaultMale.hkx":
                     {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryAttackSpeed);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_InjuryAttackSpeed);
                         raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_NPCRaceSpell);
 
                         // Dremora
                         if (raceCopy.EditorID!.Contains("DremoraRace"))
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
                         }
                         else
                         {
                             // normal humanoid
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
                         }
 
                         // base adjustment from vanilla
@@ -1285,26 +1322,26 @@ namespace Engarde_Synthesis
                         break;
                     }
                     case "Actors\\IceWraith\\IceWraithProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_NoStamina);
 
                         raceCopy.BaseMass = 0.7f;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 153;
                         break;
                     case "Actors\\Mammoth\\MammothProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower4);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_KnockDownImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist4);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower4);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_KnockDownImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_DamagesStamina);
 
                         raceCopy.AngularAccelerationRate = 0.5f * _settings.Value.npcSettings.angularAccelerationMult;
                         break;
                     case "Actors\\Mudcrab\\MudcrabProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower0);
 
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 64;
@@ -1316,8 +1353,8 @@ namespace Engarde_Synthesis
                         });
                         break;
                     case "Actors\\DLC02\\Riekling\\RieklingProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
 
                         raceCopy.BaseMass = 1;
                         raceCopy.Attacks.ForEach(x =>
@@ -1327,10 +1364,10 @@ namespace Engarde_Synthesis
                         });
                         break;
                     case "Actors\\SabreCat\\SabreCatProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_PaddedKW);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryBleed);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_PaddedKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_InjuryBleed);
                         raceCopy.BaseMass = 3;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 68;
@@ -1343,8 +1380,8 @@ namespace Engarde_Synthesis
                         });
                         break;
                     case "Actors\\Skeever\\SkeeverProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower0);
 
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 64;
@@ -1356,17 +1393,17 @@ namespace Engarde_Synthesis
                         });
                         break;
                     case "Actors\\Spriggan\\Spriggan.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
 
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 77;
                         break;
                     // VampireLord, not balanced yet
                     case "Actors\\Troll\\TrollProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_DamagesStamina);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_DamagesStamina);
 
                         raceCopy.BaseMass = 3;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
@@ -1374,23 +1411,23 @@ namespace Engarde_Synthesis
                         raceCopy.Attacks.ForEach(SetTrollAttackData);
                         break;
                     case "Actors\\VampireLord\\VampireLord.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_PaddedKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_PaddedKW);
                         break;
                     case "Actors\\WerewolfBeast\\WerewolfBeastProject.hkx"
                         when _settings.Value.npcSettings.werewolfTweaks:
                     {
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_WerewolfRaceKW);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_WeakAgainstArmored);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaminaControlledKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_WerewolfRaceKW);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_WeakAgainstArmored);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaminaControlledKW);
 
                         raceCopy.Regen[BasicStat.Stamina] = 1;
 
                         bool isWerebeast = false;
                         if (raceCopy.EditorID?.Contains("Werebear") ?? false)
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower2);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist4);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist4);
                             raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
 
                             raceCopy.BaseMass = 6;
@@ -1410,8 +1447,8 @@ namespace Engarde_Synthesis
                         }
                         else if (raceCopy.EditorID!.Contains("Were"))
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist3);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist3);
                             raceCopy.ActorEffect.Add(Engarde.ASpell.MCT_BonusArmor250);
 
                             raceCopy.BaseMass = 3;
@@ -1431,8 +1468,8 @@ namespace Engarde_Synthesis
                         }
                         else
                         {
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower1);
-                            AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist1);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
 
                             raceCopy.BaseMass = 1.4f;
                             raceCopy.UnarmedDamage = 8 * _settings.Value.npcSettings.unarmedDamageMult;
@@ -1442,29 +1479,29 @@ namespace Engarde_Synthesis
                         break;
                     }
                     case "Actors\\Wisp\\WispProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_KnockDownImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_NoStamina);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_KnockDownImmune);
 
                         raceCopy.BaseMass = 0.2f;
                         raceCopy.AngularAccelerationRate = 1;
                         raceCopy.UnarmedReach = 77;
                         break;
                     case "Actors\\Witchlight\\WitchlightProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_CritImmune);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_NoStamina);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_KnockDownImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_NoStamina);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_KnockDownImmune);
 
                         raceCopy.BaseMass = 0.2f;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 64;
                         break;
                     case "Actors\\Canine\\WolfProject.hkx":
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerResist0);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_StaggerPower0);
-                        AddKeyword(raceCopy, Engarde.Keyword.MCT_InjuryBleed);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower0);
+                        raceCopy.AddKeyword(Engarde.Keyword.MCT_InjuryBleed);
                         raceCopy.AngularAccelerationRate = 0.3f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 64;
                         raceCopy.Attacks.ForEach(x =>
@@ -2098,29 +2135,29 @@ namespace Engarde_Synthesis
             };
             if (_settings.Value.npcSettings.dragonTweaks)
             {
-                //TODO: try to reduce code repeating
-                IMagicEffect effectCopy = CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFireBreathEffect1);
-                effectCopy.ResistValue = ActorValue.None;
-                AddKeyword(effectCopy, Engarde.Keyword.MCT_BlockableSpell);
-                effectCopy.TaperDuration = 0.5f; // effect with 0 duration won't have be able to get magnitude
-                effectCopy.VirtualMachineAdapter = fireScript;
+                List<IMagicEffect> dragonBreaths = new()
+                {
+                    CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFireBreathEffect1),
+                    CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFireballEffect1),
+                    CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFrostBreathEffect1),
+                    CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFrostIceStormEffect)
+                };
 
-                effectCopy = CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFireballEffect1);
-                effectCopy.ResistValue = ActorValue.None;
-                AddKeyword(effectCopy, Engarde.Keyword.MCT_BlockableSpell);
-                effectCopy.TaperDuration = 0.5f; // effect with 0 duration won't have be able to get magnitude
-                effectCopy.VirtualMachineAdapter = fireScript;
+                dragonBreaths.ForEach(effect => { effect.ResistValue = ActorValue.None; });
+                for (int i = 0; i < 2; i++) // fire effects
+                {
+                    dragonBreaths[i].AddKeyword(Engarde.Keyword.MCT_BlockableSpell);
+                    dragonBreaths[i].TaperDuration = 0.5f;
+                    dragonBreaths[i].VirtualMachineAdapter = fireScript;
+                }
 
+                for (int i = 2; i < 5; i++) //frost effects
+                {
+                    dragonBreaths[i].SecondActorValueWeight = 0.1f; // less stamina damage
+                    dragonBreaths[i].VirtualMachineAdapter = frostScript;
+                }
 
-                effectCopy = CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFrostBreathEffect1);
-                effectCopy.ResistValue = ActorValue.None;
-                effectCopy.SecondActorValueWeight = 0.1f; // less stamina damage
-                effectCopy.VirtualMachineAdapter = frostScript;
-
-                effectCopy = CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFrostIceStormEffect);
-                effectCopy.ResistValue = ActorValue.None;
-                effectCopy.SecondActorValueWeight = 0.1f; // less stamina damage
-                effectCopy.VirtualMachineAdapter = frostScript;
+                //is it better than doing it for each effect separately?
             }
 
             if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dragonborn.esm")))
@@ -2691,25 +2728,27 @@ namespace Engarde_Synthesis
             }
         }
 
-        private static void PatchWeaponSpeedEffects(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        private static void PatchWeaponSpeedEffects(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
+            List<FormKey> weaponSpeedEffects, List<FormKey> leftWeaponSpeedEffects)
         {
             foreach (IMagicEffectGetter effect in state.LoadOrder.PriorityOrder.WinningOverrides<IMagicEffectGetter>())
             {
                 if (effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult ||
                     effect.SecondActorValue == ActorValue.WeaponSpeedMult)
                 {
-                    _weaponSpeedEffects.Add(effect.FormKey);
+                    weaponSpeedEffects.Add(effect.FormKey);
                 }
 
                 if (effect.Archetype.ActorValue == ActorValue.LeftWeaponSpeedMultiply ||
                     effect.SecondActorValue == ActorValue.LeftWeaponSpeedMultiply)
                 {
-                    _leftWeaponSpeedEffects.Add(effect.FormKey);
+                    leftWeaponSpeedEffects.Add(effect.FormKey);
                 }
             }
         }
 
-        private static void PatchWeaponSpeedSpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        private static void PatchWeaponSpeedSpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
+            List<FormKey> weaponSpeedEffects, List<FormKey> leftWeaponSpeedEffects)
         {
             if (!_settings.Value.fixAttackSpeed)
             {
@@ -2723,9 +2762,9 @@ namespace Engarde_Synthesis
                     effect.Data!.Magnitude -= 1;
                 }
 
-                static bool Predicate(IEffectGetter x) =>
-                    (_weaponSpeedEffects.Contains(x.BaseEffect.FormKey) ||
-                     _leftWeaponSpeedEffects.Contains(x.BaseEffect.FormKey)) && x.Data?.Magnitude > 1;
+                bool Predicate(IEffectGetter x) =>
+                    (weaponSpeedEffects.Contains(x.BaseEffect.FormKey) ||
+                     leftWeaponSpeedEffects.Contains(x.BaseEffect.FormKey)) && x.Data?.Magnitude > 1;
 
                 bool haveWeaponSpeedEffect = spell.Effects.Any(Predicate);
                 if (haveWeaponSpeedEffect)
@@ -2820,8 +2859,10 @@ namespace Engarde_Synthesis
 
         #endregion
 
-        public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
+        private static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
+            List<FormKey> weaponSpeedEffects = new();
+            List<FormKey> leftWeaponSpeedEffects = new();
             state.PatchGlobals();
             PatchArmors(state);
             PatchWeapons(state);
@@ -2837,8 +2878,8 @@ namespace Engarde_Synthesis
             PatchDefensiveMoves(state);
             PatchEffects(state);
             PatchSpells(state);
-            PatchWeaponSpeedEffects(state);
-            PatchWeaponSpeedSpell(state);
+            PatchWeaponSpeedEffects(state, weaponSpeedEffects, leftWeaponSpeedEffects);
+            PatchWeaponSpeedSpell(state, weaponSpeedEffects, leftWeaponSpeedEffects);
             PatchProjectiles(state);
             PatchMovement(state);
         }
