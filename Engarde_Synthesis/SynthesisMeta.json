@@ -1,8 +1,8 @@
 {
   "Nickname": "Engarde_Synthesis",
-  "Visibility": "Exclude",
-  "OneLineDescription": "",
-  "LongDescription": "",
+  "Visibility": "Visible",
+  "OneLineDescription": "Engarde synthesis patcher",
+  "LongDescription": "This is the port of original Engarde's zEdit module.\n\nThis patch is essential part of Engarde. It includes wide amount of edits. \nYou can learn more about it on a mod page",
   "PreferredAutoVersioning": "Default",
   "RequiredMods": [
     "Engarde.esp"
