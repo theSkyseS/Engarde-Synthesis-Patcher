@@ -2151,7 +2151,7 @@ namespace Engarde_Synthesis
                     dragonBreaths[i].VirtualMachineAdapter = fireScript;
                 }
 
-                for (int i = 2; i < 5; i++) //frost effects
+                for (int i = 2; i < 4; i++) //frost effects
                 {
                     dragonBreaths[i].SecondActorValueWeight = 0.1f; // less stamina damage
                     dragonBreaths[i].VirtualMachineAdapter = frostScript;
