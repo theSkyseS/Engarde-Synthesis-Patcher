@@ -1,11 +1,14 @@
+using Mutagen.Bethesda.Skyrim;
+
 namespace Mutagen.Bethesda.FormKeys.SkyrimSE
 {
     public static partial class Engarde
     {
         public static class MovementType
         {
-            private readonly static ModKey ModKey = ModKey.FromNameAndExtension("Engarde.esp");
-            public static FormKey GargoyleDefault_MT => ModKey.MakeFormKey(0xd036);
+            private static FormLink<IMovementTypeGetter> Construct(uint id) => new(ModKey.MakeFormKey(id));
+
+            public static FormLink<IMovementTypeGetter> GargoyleDefault_MT => Construct(0xd036);
         }
     }
 }
