@@ -3,6 +3,9 @@
 This is a port of Engarde patcher to Synthesis/Mutagen Framework, which allows to bypass 255 plugin limit,<br>
 (not completely though, you still must have < 254 esp/esm plugins).
 
+_Note_: if you want to use prerelease versions of Mutagen and Synthesis, in "Versioning" tab change target branch to "dev"
+But I strongly advice you against doing this, because prerelease versions is unstable and in active development
+
 # Credits:
 - [tudoru](https://www.nexusmods.com/skyrimspecialedition/users/2327661), the author of Engarde;
 - [Noggog](https://github.com/Noggog), the author of Mutagen and Synthesis.
