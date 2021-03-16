@@ -1,10 +1,12 @@
+using Mutagen.Bethesda.Skyrim;
+
 namespace Mutagen.Bethesda.FormKeys.SkyrimSE
 {
     public static partial class Engarde
     {
         public static class Global
         {
-            private readonly static ModKey ModKey = ModKey.FromNameAndExtension("Engarde.esp");
+            private static FormLink<IGlobalGetter> Construct(uint id) => new(ModKey.MakeFormKey(id));
             public static FormKey MCT_KeySheathe => ModKey.MakeFormKey(0x26648b);
             public static FormKey MCT_StartingStagger => ModKey.MakeFormKey(0x289f);
             public static FormKey MCT_IncrementStagger => ModKey.MakeFormKey(0x28a5);

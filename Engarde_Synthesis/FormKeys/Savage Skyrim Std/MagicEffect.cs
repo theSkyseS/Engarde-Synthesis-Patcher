@@ -1,3 +1,5 @@
+using Mutagen.Bethesda.Skyrim;
+
 namespace Mutagen.Bethesda.FormKeys.SkyrimSE
 {
     public static partial class SavageSkyrim
@@ -5,9 +7,11 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
         public static class MagicEffect
         {
             private readonly static ModKey ModKey = ModKey.FromNameAndExtension("Savage Skyrim Std.esp");
-            public static FormKey __A2_STHC_ForceThrow_1 => ModKey.MakeFormKey(0x85f0);
-            public static FormKey __A2_STHC_ForceThrow_2 => ModKey.MakeFormKey(0x2366c);
-            public static FormKey __A2_STHC_Stagger => ModKey.MakeFormKey(0x34587);
+            private static FormLinkNullable<IMagicEffectGetter> Construct(uint id) => new(ModKey.MakeFormKey(id));
+
+            public static FormLinkNullable<IMagicEffectGetter> __A2_STHC_ForceThrow_1 => Construct(0x85f0);
+            public static FormLinkNullable<IMagicEffectGetter> __A2_STHC_ForceThrow_2 => Construct(0x2366c);
+            public static FormLinkNullable<IMagicEffectGetter> __A2_STHC_Stagger => Construct(0x34587);
         }
     }
 }
