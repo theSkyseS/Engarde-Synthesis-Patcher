@@ -10,7 +10,7 @@ namespace Engarde_Synthesis.Settings
         public bool staminaManagement { get; set; } = true;
         [SynthesisSettingName("NPC dodging")]
         public bool npcDodging { get; set; } = true;
-        [SynthesisSettingName("First normal attack in a combo have windup")]
+        [SynthesisSettingName("First normal attack in a combo have windup (Experimental)")]
         public bool npcAttackWindup { get; set; } = false;
         [SynthesisSettingName("Turning acceleration multiplier, higher makes npc react slower")]
         public int angularAccelerationMult { get; set; } = 7;
