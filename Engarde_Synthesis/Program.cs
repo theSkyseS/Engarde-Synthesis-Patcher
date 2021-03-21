@@ -712,15 +712,14 @@ namespace Engarde_Synthesis
 
         private static void PatchArmors(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (IArmorGetter? armor in state.LoadOrder.PriorityOrder.WinningOverrides<IArmorGetter>())
-            {
-                if ((armor.BodyTemplate?.Flags.HasFlag(BodyTemplate.Flag.NonPlayable) ?? true) ||
-                    !armor.TemplateArmor.IsNull ||
-                    (!armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? true))
-                {
-                    continue;
-                }
+            static bool Predicate(IArmorGetter armor) =>
+                (!armor.BodyTemplate?.Flags.HasFlag(BodyTemplate.Flag.NonPlayable) ?? false) &&
+                armor.TemplateArmor.IsNull &&
+                (armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? false);
 
+            foreach (IArmorGetter? armor in state.LoadOrder.PriorityOrder.WinningOverrides<IArmorGetter>()
+                .Where(Predicate))
+            {
                 switch (armor.BodyTemplate!.ArmorType)
                 {
                     case ArmorType.LightArmor:
@@ -738,6 +737,7 @@ namespace Engarde_Synthesis
                         armorCopy.Keywords.Add(Engarde.Keyword.MCT_ArmoredKW);
                         break;
                     }
+                    case ArmorType.Clothing: continue;
                     default: continue;
                 }
             }
@@ -767,13 +767,9 @@ namespace Engarde_Synthesis
 
         private static void PatchWeapons(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (IWeaponGetter weapon in state.LoadOrder.PriorityOrder.WinningOverrides<IWeaponGetter>())
+            foreach (IWeaponGetter weapon in state.LoadOrder.PriorityOrder.WinningOverrides<IWeaponGetter>()
+                .Where(weapon => weapon.Template.IsNull && weapon.Data != null))
             {
-                if (!weapon.Template.IsNull || weapon.Data == null)
-                {
-                    continue;
-                }
-
                 Weapon weaponCopy = state.PatchMod.Weapons.GetOrAddAsOverride(weapon);
                 weaponCopy.Data!.Speed *= _settings.Value.weaponSettings.weaponSpeedMult;
                 weaponCopy.Data!.Reach *= _settings.Value.weaponSettings.weaponReachMult;
@@ -852,19 +848,16 @@ namespace Engarde_Synthesis
                         weaponCopy.ChangeWeapon(8, reachMult: 1.15f, critMult: 0.5f,
                             armorPenetration: WeaponArmorPenetration.Weak);
                         break;
+                    default: continue;
                 }
             }
         }
 
         private static void PatchRaces(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (var race in state.LoadOrder.PriorityOrder.WinningOverrides<IRaceGetter>())
+            foreach (var race in state.LoadOrder.PriorityOrder.WinningOverrides<IRaceGetter>()
+                .Where(race => race.EditorID != null))
             {
-                if (race.EditorID == null)
-                {
-                    continue;
-                }
-
                 Race raceCopy = state.PatchMod.Races.GetOrAddAsOverride(race);
                 bool growlEnabled =
                     state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp"));
@@ -1538,21 +1531,21 @@ namespace Engarde_Synthesis
 
         private static void PatchNpcs(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (INpcGetter npc in state.LoadOrder.PriorityOrder.WinningOverrides<INpcGetter>())
+            bool Predicate(INpcGetter npc)
             {
-                string? npcRaceEdid = npc.Race.Resolve(state.LinkCache)!.EditorID;
-                if (npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.SpellList) ||
-                    npc.Race.IsNull || npcRaceEdid.IsNullOrEmpty())
-                {
-                    continue;
-                }
+                string npcRaceEdid = npc.Race.Resolve(state.LinkCache).EditorID!;
+                return !npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.SpellList) &&
+                       !npc.Race.IsNull && !npcRaceEdid.IsNullOrEmpty() && (npc.Attacks.Count != 0 ||
+                                                                            npcRaceEdid.Contains("GiantRace") ||
+                                                                            npcRaceEdid.Contains("LurkerRace"));
+            }
 
-                if (!( /*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
-                      || npcRaceEdid == "AlduinRace" ||*/ npcRaceEdid.Contains("GiantRace") ||
-                                                          npcRaceEdid.Contains("LurkerRace") || npc.Attacks.Count != 0))
-                {
-                    continue;
-                }
+            foreach (INpcGetter npc in state.LoadOrder.PriorityOrder.WinningOverrides<INpcGetter>().Where(Predicate))
+            {
+                string npcRaceEdid = npc.Race.Resolve(state.LinkCache).EditorID!;
+
+                /*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
+                || npcRaceEdid == "AlduinRace" ||*/
 
                 if (_settings.Value.staggerSettings.weaponStagger)
                 {
@@ -1940,14 +1933,9 @@ namespace Engarde_Synthesis
         private static void PatchIdles(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>()
-            )
+                .Where(idle => idle.EditorID != "MCTDefensiveMoves" && idle.EditorID != "BlockHit" &&
+                               idle.EditorID != "SneakStart" && idle.EditorID != "SneakStop"))
             {
-                if (idle.EditorID == "MCTDefensiveMoves" || idle.EditorID == "BlockHit" ||
-                    idle.EditorID == "SneakStart" || idle.EditorID == "SneakStop")
-                {
-                    continue;
-                }
-
                 if (_settings.Value.defensiveActions.defensiveActions && Equals(idle.RelatedIdles[0],
                     new FormLink<IIdleRelationGetter>(Skyrim.IdleAnimation.SneakRoot)) && idle.RelatedIdles[1].IsNull)
                 {
@@ -2775,9 +2763,8 @@ namespace Engarde_Synthesis
                 static Projectile CopyProjectile(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState,
                     IFormLink<IProjectileGetter> projLink)
                 {
-                    patcherState.PatchMod.Projectiles.TryGetOrAddAsOverride(projLink, patcherState.LinkCache,
-                        out var projectileCopy);
-                    return projectileCopy!;
+                    var projectile = projLink.Resolve(patcherState.LinkCache);
+                    return patcherState.PatchMod.Projectiles.GetOrAddAsOverride(projectile);
                 }
 
                 var projectileCopy = CopyProjectile(state, Skyrim.Projectile.DragonFrostProjectile01);
