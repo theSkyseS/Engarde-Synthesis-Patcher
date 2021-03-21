@@ -1578,9 +1578,9 @@ namespace Engarde_Synthesis
 
         private static void PatchAttacks(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            var leftHandAttack = new FormLink<IIdleRelationGetter>(Skyrim.IdleAnimation.LeftHandAttack);
-            var mctAttackLeftH2H = new FormLink<IIdleRelationGetter>(Engarde.IdleAnimation.MCTAttackLeftH2H);
-            var nonMountedCombatRight = new FormLink<IIdleRelationGetter>(Update.IdleAnimation.NonMountedCombatRight);
+            var leftHandAttack = Skyrim.IdleAnimation.LeftHandAttack;
+            var mctAttackLeftH2H = Engarde.IdleAnimation.MCTAttackLeftH2H;
+            var nonMountedCombatRight = Update.IdleAnimation.NonMountedCombatRight;
             IFormLink<IIdleRelationGetter> originalNormalAttackSibling = new FormLink<IIdleRelationGetter>();
             IFormLink<IIdleRelationGetter> originalH2HAttackSibling = new FormLink<IIdleRelationGetter>();
             IFormLink<IIdleRelationGetter> originalLeftHandAttackSibling = new FormLink<IIdleRelationGetter>();
@@ -1695,11 +1695,10 @@ namespace Engarde_Synthesis
 
             if (_settings.Value.powerAttacks.powerAttackTweaks)
             {
-                var idle = state.LinkCache.Resolve<IIdleAnimationGetter>(Engarde.IdleAnimation.MCTPowerAttack);
+                var idle = Engarde.IdleAnimation.MCTPowerAttack.Resolve(state.LinkCache);
                 IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-                idleCopy.RelatedIdles[0] = new FormLink<IIdleAnimationGetter>(Skyrim.IdleAnimation.SheathRight);
-                idleCopy.RelatedIdles[1] =
-                    new FormLink<IIdleAnimationGetter>(Skyrim.IdleAnimation.DefaultSheathe);
+                idleCopy.RelatedIdles[0] = Skyrim.IdleAnimation.SheathRight;
+                idleCopy.RelatedIdles[1] = Skyrim.IdleAnimation.DefaultSheathe;
             }
 
             if (_settings.Value.npcSettings.dragonTweaks)
@@ -1719,7 +1718,7 @@ namespace Engarde_Synthesis
 
             if (_settings.Value.basicAttacks.dwAttackTweaks)
             {
-                var idle = state.LinkCache.Resolve<IIdleAnimationGetter>(Skyrim.IdleAnimation.BlockingStart);
+                var idle = Skyrim.IdleAnimation.BlockingStart.Resolve(state.LinkCache);
                 IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                 idleCopy.RelatedIdles[1] = originalLeftHandAttackSibling;
             }
@@ -1866,7 +1865,7 @@ namespace Engarde_Synthesis
             }
 
             IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfSheathe);
-            idleCopy.RelatedIdles[1] = new FormLink<IIdleRelationGetter>(Engarde.IdleAnimation.MCTPowerAttackRootBeast);
+            idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTPowerAttackRootBeast;
 
             ConditionFloat condition = new()
             {
@@ -1894,8 +1893,7 @@ namespace Engarde_Synthesis
             idleCopy.Conditions[3].CompareOperator = CompareOperator.NotEqualTo;
 
             idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTPowerAttackRootBeast);
-            idleCopy.RelatedIdles[0] =
-                new FormLink<IIdleRelationGetter>(Skyrim.IdleAnimation.WerewolfSheathRoot);
+            idleCopy.RelatedIdles[0] = Skyrim.IdleAnimation.WerewolfSheathRoot;
         }
 
         private static void PatchKillmoves(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1937,7 +1935,7 @@ namespace Engarde_Synthesis
                                idle.EditorID != "SneakStart" && idle.EditorID != "SneakStop"))
             {
                 if (_settings.Value.defensiveActions.defensiveActions && Equals(idle.RelatedIdles[0],
-                    new FormLink<IIdleRelationGetter>(Skyrim.IdleAnimation.SneakRoot)) && idle.RelatedIdles[1].IsNull)
+                    Skyrim.IdleAnimation.SneakRoot) && idle.RelatedIdles[1].IsNull)
                 {
                     Condition wantToSneak = new ConditionFloat
                     {
@@ -1952,8 +1950,7 @@ namespace Engarde_Synthesis
                     };
                     IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                     idleCopy.Conditions.Add(wantToSneak);
-                    idleCopy.RelatedIdles[1] =
-                        new FormLink<IIdleRelationGetter>(Engarde.IdleAnimation.MCTDefensiveMoves);
+                    idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTDefensiveMoves;
                     _foundAnotherSneakRootChild = true;
                 }
             }
@@ -2031,7 +2028,7 @@ namespace Engarde_Synthesis
                 idleCopy.Conditions.Add(isPowerBlocking);
 
                 idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTDefensiveMoves);
-                idleCopy.RelatedIdles[0] = new FormLink<IIdleRelationGetter>(Skyrim.IdleAnimation.SneakRoot);
+                idleCopy.RelatedIdles[0] = Skyrim.IdleAnimation.SneakRoot;
 
                 if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Ultimate Dodge Mod.esp")))
                 {
@@ -2054,8 +2051,7 @@ namespace Engarde_Synthesis
 
                 if (!_foundAnotherSneakRootChild)
                 {
-                    idleCopy.RelatedIdles[1] =
-                        new FormLink<IIdleRelationGetter>(Engarde.IdleAnimation.MCTDefensiveMoves);
+                    idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTDefensiveMoves;
                 }
             }
 
@@ -2417,7 +2413,7 @@ namespace Engarde_Synthesis
                 };
                 spellCopy = CopySpell(state, Skyrim.Spell.crGiantClubSlam);
                 spellCopy.Effects.RemoveAll(x =>
-                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantSlam);
+                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantSlam.FormKey);
 
                 spellCopy.Effects.Add(staggerSmall);
                 spellCopy.Effects.Add(staggerBig);
@@ -2435,7 +2431,7 @@ namespace Engarde_Synthesis
 
                 spellCopy = CopySpell(state, Skyrim.Spell.crGiantStomp);
                 spellCopy.Effects.RemoveAll(x =>
-                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantStomp);
+                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantStomp.FormKey);
                 spellCopy.Effects.Add(staggerSmall);
                 spellCopy.Effects.Add(staggerBig);
 
@@ -2466,11 +2462,11 @@ namespace Engarde_Synthesis
 
                 spellCopy = CopySpell(state, Skyrim.Spell.L_VoiceDragonFrost01);
                 TuneLDragonSpell(spellCopy, 10, 1);
-                spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
+                spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed.FormKey);
 
                 spellCopy = CopySpell(state, Skyrim.Spell.L_VoiceDragonFrostBall01);
                 TuneLDragonSpell(spellCopy, 10, 0);
-                spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
+                spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed.FormKey);
 
                 List<ISpell> dragonShouts = new()
                 {
@@ -2517,14 +2513,14 @@ namespace Engarde_Synthesis
                 {
                     TuneDragonBreathSpells(dragonShouts[i + 12], 20 + 10 * i, 1);
                     dragonShouts[i + 12].Effects
-                        .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
+                        .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed.FormKey);
                 }
 
                 for (int i = 0; i < 6; i++)
                 {
                     TuneDragonBreathSpells(dragonShouts[i + 18], 20 + 10 * i, 0);
                     dragonShouts[i + 18].Effects
-                        .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
+                        .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed.FormKey);
                 }
             }
 
@@ -2542,14 +2538,14 @@ namespace Engarde_Synthesis
                     };
                     savageSkyrimSpells.ForEach(x =>
                         x.Effects.RemoveAll(effect =>
-                            effect.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_Stagger));
+                            effect.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_Stagger.FormKey));
 
                     savageSkyrimSpells.ForEach(AddStaggerEffects);
 
                     ISpell powerStaggerSpell = CopySpell(state, SavageSkyrim.Spell.__AA_Animal_ForceThrow_Small);
 
                     powerStaggerSpell.Effects.RemoveAll(x =>
-                        x.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_ForceThrow_2);
+                        x.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_ForceThrow_2.FormKey);
 
                     AddPowerStaggerEffects(powerStaggerSpell);
                 }
