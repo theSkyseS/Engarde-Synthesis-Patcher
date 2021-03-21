@@ -2713,28 +2713,23 @@ namespace Engarde_Synthesis
         }
 
         private static void PatchWeaponSpeedEffects(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
-            List<IFormLink<IMagicEffectGetter>> weaponSpeedEffects,
-            List<IFormLink<IMagicEffectGetter>> leftWeaponSpeedEffects)
+            List<IFormLinkNullable<IMagicEffectGetter>> weaponSpeedEffects,
+            List<IFormLinkNullable<IMagicEffectGetter>> leftWeaponSpeedEffects)
         {
-            foreach (IMagicEffectGetter effect in state.LoadOrder.PriorityOrder.WinningOverrides<IMagicEffectGetter>())
-            {
-                if (effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult ||
-                    effect.SecondActorValue == ActorValue.WeaponSpeedMult)
-                {
-                    weaponSpeedEffects.Add(effect.AsLink());
-                }
-
-                if (effect.Archetype.ActorValue == ActorValue.LeftWeaponSpeedMultiply ||
+            List<IMagicEffectGetter> winningOverrides =
+                state.LoadOrder.PriorityOrder.WinningOverrides<IMagicEffectGetter>().ToList();
+            weaponSpeedEffects.AddRange(winningOverrides.Where(effect =>
+                effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult ||
+                effect.SecondActorValue == ActorValue.WeaponSpeedMult).Select(effect => effect.AsNullableLink()));
+            leftWeaponSpeedEffects.AddRange(winningOverrides.Where(effect =>
+                    effect.Archetype.ActorValue == ActorValue.LeftWeaponSpeedMultiply ||
                     effect.SecondActorValue == ActorValue.LeftWeaponSpeedMultiply)
-                {
-                    leftWeaponSpeedEffects.Add(effect.AsLink());
-                }
-            }
+                .Select(effect => effect.AsNullableLink()));
         }
 
         private static void PatchWeaponSpeedSpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
-            List<IFormLink<IMagicEffectGetter>> weaponSpeedEffects,
-            List<IFormLink<IMagicEffectGetter>> leftWeaponSpeedEffects)
+            List<IFormLinkNullable<IMagicEffectGetter>> weaponSpeedEffects,
+            List<IFormLinkNullable<IMagicEffectGetter>> leftWeaponSpeedEffects)
         {
             if (!_settings.Value.fixAttackSpeed)
             {
@@ -2744,8 +2739,8 @@ namespace Engarde_Synthesis
             foreach (ISpellGetter spell in state.LoadOrder.PriorityOrder.WinningOverrides<ISpellGetter>())
             {
                 bool Predicate(IEffectGetter x) =>
-                    (weaponSpeedEffects.Contains(x.BaseEffect.FormKey) ||
-                     leftWeaponSpeedEffects.Contains(x.BaseEffect.FormKey)) && x.Data?.Magnitude > 1;
+                    (weaponSpeedEffects.Contains(x.BaseEffect) ||
+                     leftWeaponSpeedEffects.Contains(x.BaseEffect)) && x.Data?.Magnitude > 1;
 
                 bool haveWeaponSpeedEffect = spell.Effects.Any(Predicate);
                 if (haveWeaponSpeedEffect)
@@ -2846,8 +2841,8 @@ namespace Engarde_Synthesis
 
         private static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            List<IFormLink<IMagicEffectGetter>> weaponSpeedEffects = new();
-            List<IFormLink<IMagicEffectGetter>> leftWeaponSpeedEffects = new();
+            List<IFormLinkNullable<IMagicEffectGetter>> weaponSpeedEffects = new();
+            List<IFormLinkNullable<IMagicEffectGetter>> leftWeaponSpeedEffects = new();
             state.PatchGlobals();
             PatchArmors(state);
             PatchWeapons(state);
