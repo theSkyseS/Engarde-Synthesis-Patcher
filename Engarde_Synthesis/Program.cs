@@ -55,9 +55,9 @@ namespace Engarde_Synthesis
          </summary>
         */
         private static void ChangeGlobalShortValue(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
-            FormKey globalKey, int value)
+            FormLink<IGlobalGetter> globalKey, int value)
         {
-            var global = state.LinkCache.Resolve<IGlobalGetter>(globalKey);
+            var global = globalKey.Resolve(state.LinkCache);
             var globalCopy = (IGlobalShort) state.PatchMod.Globals.GetOrAddAsOverride(global);
             globalCopy.Data = (short) value;
         }
@@ -158,11 +158,11 @@ namespace Engarde_Synthesis
           Copies winning override of Idle Animation into patch by using FormKey
          </summary>
          */
-        private static IIdleAnimation CopyIdle(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, FormKey idleKey)
+        private static IIdleAnimation CopyIdle(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
+            IFormLinkGetter<IIdleAnimationGetter> idleLink)
         {
-            var idle = state.LinkCache.Resolve<IIdleAnimationGetter>(idleKey);
-            IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-            return idleCopy;
+            IIdleAnimationGetter idle = idleLink.Resolve(state.LinkCache);
+            return state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
         }
 
         /**
@@ -1515,8 +1515,8 @@ namespace Engarde_Synthesis
             static IPerk CopyPerk(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState,
                 FormLink<IPerkGetter> perkLink)
             {
-                patcherState.PatchMod.Perks.TryGetOrAddAsOverride(perkLink, patcherState.LinkCache, out var perkCopy);
-                return perkCopy!;
+                var perk = perkLink.Resolve(patcherState.LinkCache);
+                return patcherState.PatchMod.Perks.GetOrAddAsOverride(perk);
             }
 
             IPerk perkCopy = CopyPerk(state, Engarde.Perk.MCT_MultDamageOnForwardPowerAttack);
@@ -2083,9 +2083,8 @@ namespace Engarde_Synthesis
             static IMagicEffect CopyEffect(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
                 IFormLinkGetter<IMagicEffectGetter> formLink)
             {
-                state.PatchMod.MagicEffects.TryGetOrAddAsOverride(formLink, state.LinkCache,
-                    out MagicEffect? recordCopy);
-                return recordCopy!;
+                var effect = formLink.Resolve(state.LinkCache);
+                return state.PatchMod.MagicEffects.GetOrAddAsOverride(effect);
             }
 
             VirtualMachineAdapter fireScript = new()
@@ -2269,9 +2268,8 @@ namespace Engarde_Synthesis
             static ISpell CopySpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState,
                 IFormLinkGetter<ISpellGetter> spellLink)
             {
-                patcherState.PatchMod.Spells.TryGetOrAddAsOverride(spellLink, patcherState.LinkCache,
-                    out Spell? spellCopy);
-                return spellCopy!;
+                var spell = spellLink.Resolve(patcherState.LinkCache);
+                return patcherState.PatchMod.Spells.GetOrAddAsOverride(spell);
             }
 
             static void TuneLDragonSpell(ISpell spell, int increment, int duration)
@@ -2800,11 +2798,11 @@ namespace Engarde_Synthesis
 
         private static void PatchMovement(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            static IMovementType CopyMovt(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
-                IFormLink<IMovementTypeGetter> formKey)
+            static IMovementType CopyMovt(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState,
+                IFormLink<IMovementTypeGetter> movtLink)
             {
-                state.PatchMod.MovementTypes.TryGetOrAddAsOverride(formKey, state.LinkCache, out MovementType? record);
-                return record!;
+                var movt = movtLink.Resolve(patcherState.LinkCache);
+                return patcherState.PatchMod.MovementTypes.GetOrAddAsOverride(movt);
             }
 
             static void ChangeMovt(IMovementType movt, int speed, int forwardSpeed)
