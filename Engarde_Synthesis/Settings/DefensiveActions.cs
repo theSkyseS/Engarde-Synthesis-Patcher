@@ -5,7 +5,7 @@ namespace Engarde_Synthesis.Settings
 {
     public record DefensiveActions
     {
-        [SynthesisSettingName("Dodge and power block with the sneak key")]
+        [SynthesisSettingName("Dodge and power block")]
         public bool defensiveActions { get; set; } = true;
         
         [SynthesisSettingName("Heavy Armor step dodge animation:")]
