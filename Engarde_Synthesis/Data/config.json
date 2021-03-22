@@ -1,0 +1,519 @@
+﻿{
+  "Races": {
+    "Actors\\AtronachFlame\\AtronachFlame.hkx": {
+      "Keywords": [
+        "MCT_CritImmune",
+        "MCT_NoStamina",
+        "MCT_StaggerResist1",
+        "MCT_StaggerPower1"
+      ],
+      "Angular Acceleration": 0.25,
+      "Base Mass": 2
+    },
+    "Actors\\AtronachFrost\\AtronachFrostProject.hkx": {
+      "Keywords": [
+        "MCT_ArmoredKW",
+        "MCT_CritImmune",
+        "MCT_NoStamina",
+        "MCT_StaggerResist3",
+        "MCT_StaggerPower3"
+      ],
+      "Remove Default Spell": true,
+      "Armor": "Armor500",
+      "Angular Acceleration": 0.75,
+      "Base Mass": 6,
+      "Unarmed Reach": 156,
+      "Unarmed Damage": 40,
+      "Attacks": {
+        "attackPowerStart_ForwardPowerAttack_R1": {
+          "Attack Chance": 5,
+          "Attack Type": "Null",
+          "Attack Spell": "MCT_PowerAttackSpell"
+        },
+        "attackPowerStart_PowerAttack_L1": {
+          "Attack Chance": 0.7,
+          "Attack Angle": -15,
+          "Attack Spell": "MCT_PowerAttackSpell"
+        },
+        "attackStart_Attack_L1": {
+          "Attack Chance": 1,
+          "Attack Angle": -25,
+          "Damage Multiplier Increment": 0.5,
+          "Attack Flag": "PowerAttack",
+          "Attack Spell": "MCT_PowerAttackSpell"
+        },
+        "attackStart_Attack_R1": {
+          "Attack Chance": 1,
+          "Attack Angle": 5,
+          "Damage Multiplier Increment": 0.5,
+          "Strike Angle": 25,
+          "Attack Flag": "PowerAttack",
+          "Attack Spell": "MCT_PowerAttackSpell"
+        },
+        "bashPowerStart": {
+          "Strike Angle": 65,
+          "Attack Spell": "MCT_PowerAttackSpell"
+        },
+        "bashStart": {
+          "Attack Spell": "MCT_PowerAttackSpell"
+        }
+      }
+    },
+    "Actors\\AtronachStorm\\AtronachStormProject.hkx": {
+      "Keywords": [
+        "MCT_CritImmune",
+        "MCT_NoStamina",
+        "MCT_StaggerResist2",
+        "MCT_StaggerPower2"
+      ],
+      "Angular Acceleration": 0.25,
+      "Base Mass": 4,
+      "Unarmed Reach": 160
+    },
+    "Actors\\Bear\\BearProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist2",
+        "MCT_StaggerPower2",
+        "MCT_PaddedKW",
+        "MCT_InjuryBleed"
+      ],
+      "Angular Acceleration": 0.25,
+      "Base Mass": 3.5,
+      "Unarmed Reach": 79,
+      "Unarmed Damage Multiplier": 1.5,
+      "Attacks": {
+        "attackStart_Attack1": {
+          "Attack Angle": -45
+        },
+        "attackStart_AttackLeft1": {
+          "Attack Angle": -45
+        },
+        "attackStart_Attack2": {
+          "Attack Angle": 45
+        },
+        "attackStart_AttackRight1": {
+          "Attack Angle": 45
+        },
+        "attackStart_StandingPower": {
+          "Damage Multiplier Increment": 1,
+          "Strike Angle": 65
+        },
+        "attackStart_ForwardPower": {
+          "Strike Angle": 58
+        },
+        "attackStart_ForwardPowerShort": {
+          "Strike Angle": 58
+        }
+      }
+    },
+    "Actors\\DLC02\\BoarRiekling\\BoarProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist2",
+        "MCT_StaggerPower2"
+      ],
+      "Low Attacks": true
+    },
+    "Actors\\Cow\\HighlandCowProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1",
+        "MCT_StaggerPower1"
+      ]
+    },
+    "Actors\\Chaurus\\ChaurusProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist2",
+        "MCT_StaggerPower2",
+        "MCT_ArmoredKW",
+        "MCT_WeakAgainstArmored",
+        "MCT_InjuryKnockDown"
+      ],
+      "Armor": "Armor250",
+      "Angular Acceleration": 0.25,
+      "Base Mass": 2.5,
+      "Unarmed Reach": 86
+    },
+    "Actors\\DLC01\\ChaurusFlyer\\ChaurusFlyer.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1",
+        "MCT_StaggerPower1",
+        "MCT_ArmoredKW",
+        "MCT_WeakAgainstArmored"
+      ],
+      "Armor": "Armor250",
+      "Angular Acceleration": 0.25,
+      "Base Mass": 1.5
+    },
+    "Actors\\Deer\\DeerProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1",
+        "MCT_StaggerPower1"
+      ],
+      "Angular Acceleration Hard": 1,
+      "Base Mass": 2
+    },
+    "Actors\\Canine\\DogProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist0",
+        "MCT_StaggerPower0"
+      ],
+      "Angular Acceleration": 0.25
+    },
+    "Actors\\Draugr\\DraugrProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1"
+      ],
+      "Angular Acceleration": 0.12,
+      "Base Mass": 2,
+      "Unarmed Reach": 77,
+      "Add NPC Spell": true
+    },
+    "Actors\\DLC02\\DwarvenBallistaCenturion\\BallistaCenturion.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1",
+        "MCT_StaggerPower1",
+        "MCT_CritImmune",
+        "MCT_DamagesStamina",
+        "MCT_ArmoredKW"
+      ],
+      "Armor": "Armor250",
+      "Angular Acceleration": 0.25
+    },
+    "Actors\\DwarvenSteamCenturion\\SteamProject.hkx": {
+      "Keywords": [
+        "MCT_CritImmune",
+        "MCT_StaggerResist4",
+        "MCT_StaggerPower3",
+        "MCT_KnockDownImmune",
+        "MCT_DamagesStamina",
+        "MCT_ArmoredKW"
+      ],
+      "Armor": "Armor500",
+      "Angular Acceleration": 0.25,
+      "Base Mass": 8,
+      "Unarmed Reach": 200,
+      "Remove Default Spell": true,
+      "Attacks": {
+        "attackStartBack": {
+          "Attack Angle": 150,
+          "Strike Angle": 70,
+          "Attack Type": "Null"
+        },
+        "attackStartRight": {
+          "Attack Angle": 150,
+          "Strike Angle": 70,
+          "Attack Type": "Null"
+        },
+        "attackStartLeft": {
+          "Attack Angle": -150,
+          "Strike Angle": 70,
+          "Attack Type": "Null"
+        },
+        "attackStartForwardPowerLeft": {
+          "Attack Angle": -10,
+          "Strike Angle": 60,
+          "Attack Type": "Null"
+        },
+        "attackStartForwardPowerRushLeft": {
+          "Attack Angle": -10,
+          "Strike Angle": 60,
+          "Attack Type": "Null"
+        },
+        "attackStartForwardPowerRight": {
+          "Attack Angle": 10,
+          "Strike Angle": 60,
+          "Attack Type": "Null",
+          "Damage Multiplier": 2
+        },
+        "attackStartSlash": {
+          "Attack Angle": -20,
+          "Strike Angle": 70,
+          "Attack Type": "Null",
+          "Damage Multiplier": 0.75
+        },
+        "bashStart": {
+          "Attack Angle": 20,
+          "Strike Angle": 70,
+          "Attack Type": "Null",
+          "Damage Multiplier": 0.5
+        },
+        "attackStartStab": {
+          "Attack Angle": 20,
+          "Strike Angle": 25,
+          "Attack Type": "MCT_VerticalAttack",
+          "Damage Multiplier": 1.25
+        },
+        "attackStartChop": {
+          "Attack Angle": 20,
+          "Strike Angle": 25,
+          "Attack Type": "MCT_VerticalAttack",
+          "Damage Multiplier": 1.25
+        }
+      }
+    },
+    "Actors\\DwarvenSphereCenturion\\SphereCenturion.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1",
+        "MCT_StaggerPower1",
+        "MCT_InjuryStun",
+        "MCT_CritImmune",
+        "MCT_ArmoredKW"
+      ],
+      "Armor": "Armor250",
+      "Angular Acceleration": 0.12,
+      "Base Mass": 2.5,
+      "Unarmed Reach": 102,
+      "Attacks": {
+        "attackStartChop": {
+          "Attack Angle": 15,
+          "Strike Angle": 28
+        },
+        "attackStartForwardPowerChop": {
+          "Attack Angle": 15,
+          "Strike Angle": 28
+        },
+        "attackStartStab": {
+          "Strike Angle": 20,
+          "Damage Multiplier Increment": 0.5
+        },
+        "attackStartForwardPowerStab": {
+          "Strike Angle": 20,
+          "Damage Multiplier Increment": 0.5
+        }
+      }
+    },
+    "Actors\\DwarvenSpider\\DwarvenSpiderCenturionProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist0",
+        "MCT_StaggerPower0",
+        "MCT_WeakAgainstArmored",
+        "MCT_CritImmune",
+        "MCT_ArmoredKW"
+      ],
+      "Armor": "Armor250",
+      "Base Mass": 1,
+      "Angular Acceleration": 0.25,
+      "Unarmed Reach": 77
+    },
+    "Actors\\DragonPriest\\Dragon_Priest.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1",
+        "MCT_StaggerPower1"
+      ],
+      "Angular Acceleration": 0.25,
+      "Unarmed Reach": 64
+    },
+    "Actors\\Falmer\\FalmerProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1",
+        "MCT_InjuryAttackSpeed"
+      ],
+      "Add NPC Spell": true,
+      "Angular Acceleration": 0.25,
+      "Base Mass": 1.5,
+      "Unarmed Reach": 77,
+      "Attacks": {
+        "attackPowerStartForward1": {
+          "Attack Angle": 10
+        },
+        "attackStartAttack4": {
+          "Strike Angle": 28
+        }
+      }
+    },
+    "Actors\\Goat\\GoatProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist0",
+        "MCT_StaggerPower0"
+      ],
+      "Angular Acceleration": 0.25
+    },
+    "Actors\\Hagraven\\HagravenProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1",
+        "MCT_StaggerPower1"
+      ],
+      "Angular Acceleration": 0.25,
+      "Unarmed Reach": 64
+    },
+    "Actors\\Horker\\HorkerProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist2",
+        "MCT_StaggerPower1"
+      ],
+      "Angular Acceleration": 0.25,
+      "Unarmed Reach": 64
+    },
+    "Actors\\Horse\\HorseProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist2",
+        "MCT_StaggerPower1"
+      ],
+      "Angular Acceleration": 0.25
+    },
+    "Actors\\IceWraith\\IceWraithProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist0",
+        "MCT_StaggerPower0",
+        "MCT_CritImmune",
+        "MCT_NoStamina"
+      ],
+      "Angular Acceleration": 0.25,
+      "Base Mass": 0.7,
+      "Unarmed Reach": 153
+    },
+    "Actors\\Mammoth\\MammothProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist4",
+        "MCT_StaggerPower4",
+        "MCT_KnockDownImmune",
+        "MCT_DamagesStamina"
+      ],
+      "Angular Acceleration": 0.5
+    },
+    "Actors\\Mudcrab\\MudcrabProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist0",
+        "MCT_StaggerPower0"
+      ],
+      "Angular Acceleration": 0.25,
+      "Low Attacks": true,
+      "Unarmed Reach": 64
+    },
+    "Actors\\DLC02\\Riekling\\RieklingProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1",
+        "MCT_StaggerPower1"
+      ],
+      "Base Mass": 1,
+      "Low Attacks": true
+    },
+    "Actors\\SabreCat\\SabreCatProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist2",
+        "MCT_StaggerPower2",
+        "MCT_PaddedKW",
+        "MCT_InjuryBleed"
+      ],
+      "Angular Acceleration": 0.25,
+      "Base Mass": 3,
+      "Low Attacks": true,
+      "Unarmed Reach": 68,
+      "Unarmed Damage Multiplier": 1.2
+    },
+    "Actors\\Skeever\\SkeeverProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist0",
+        "MCT_StaggerPower0"
+      ],
+      "Angular Acceleration": 0.25,
+      "Low Attacks": true,
+      "Unarmed Reach": 64
+    },
+    "Actors\\Spriggan\\Spriggan.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1",
+        "MCT_StaggerPower1"
+      ],
+      "Angular Acceleration": 0.25,
+      "Unarmed Reach": 77
+    },
+    "Actors\\Troll\\TrollProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist2",
+        "MCT_StaggerPower2",
+        "MCT_DamagesStamina"
+      ],
+      "Angular Acceleration": 0.25,
+      "Base Mass": 3,
+      "Unarmed Reach": 112,
+      "Attacks": {
+        "attackStartLeftA": {
+          "Attack Angle": -45,
+          "Strike Angle": 45
+        },
+        "attackStartLeftB": {
+          "Attack Angle": -45,
+          "Strike Angle": 45
+        },
+        "attackStartLeftC": {
+          "Attack Angle": -45,
+          "Strike Angle": 45
+        },
+        "attackStartLeftD": {
+          "Attack Angle": -45,
+          "Strike Angle": 45
+        },
+        "attackStartRightA": {
+          "Attack Angle": 45,
+          "Strike Angle": 45
+        },
+        "attackStartRightB": {
+          "Attack Angle": 45,
+          "Strike Angle": 45
+        },
+        "attackStartRightC": {
+          "Attack Angle": 45,
+          "Strike Angle": 45
+        },
+        "attackStartRightD": {
+          "Attack Angle": 45,
+          "Strike Angle": 45
+        },
+        "attackStartRightPower": {
+          "Attack Angle": 45,
+          "Strike Angle": 45
+        },
+        "attackStartPowerComboA": {
+          "Strike Angle": 45
+        },
+        "attackStartPowerComboB": {
+          "Strike Angle": 45
+        },
+        "attackStartPowerComboC": {
+          "Strike Angle": 45
+        },
+        "attackStartPowerX2": {
+          "Strike Angle": 45
+        }
+      }
+    },
+    "Actors\\VampireLord\\VampireLord.hkx": {
+      "Keywords": [
+        "MCT_StaggerImmune",
+        "MCT_PaddedKW"
+      ]
+    },
+    "Actors\\Wisp\\WispProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerImmune",
+        "MCT_CritImmune",
+        "MCT_NoStamina",
+        "MCT_KnockDownImmune"
+      ],
+      "Angular Acceleration Hard": 1,
+      "Base Mass": 0.2,
+      "Unarmed Reach": 77
+    },
+    "Actors\\Witchlight\\WitchlightProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerImmune",
+        "MCT_CritImmune",
+        "MCT_NoStamina",
+        "MCT_KnockDownImmune"
+      ],
+      "Angular Acceleration": 0.25,
+      "Base Mass": 0.2,
+      "Unarmed Reach": 64
+    },
+    "Actors\\Canine\\WolfProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist0",
+        "MCT_StaggerPower0",
+        "MCT_InjuryBleed"
+      ],
+      "Angular Acceleration": 0.3,
+      "Low Attacks": true,
+      "Unarmed Reach": 64
+    }
+  }
+}
