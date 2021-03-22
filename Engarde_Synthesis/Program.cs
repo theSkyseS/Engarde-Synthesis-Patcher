@@ -55,9 +55,9 @@ namespace Engarde_Synthesis
          </summary>
         */
         private static void ChangeGlobalShortValue(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
-            FormKey globalKey, int value)
+            FormLink<IGlobalGetter> globalKey, int value)
         {
-            var global = state.LinkCache.Resolve<IGlobalGetter>(globalKey);
+            var global = globalKey.Resolve(state.LinkCache);
             var globalCopy = (IGlobalShort) state.PatchMod.Globals.GetOrAddAsOverride(global);
             globalCopy.Data = (short) value;
         }
@@ -158,11 +158,10 @@ namespace Engarde_Synthesis
           Copies winning override of Idle Animation into patch by using FormKey
          </summary>
          */
-        private static IIdleAnimation CopyIdle(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, FormKey idleKey)
+        private static IIdleAnimation CopyIdle(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
+            IFormLinkGetter<IIdleAnimationGetter> idleLink)
         {
-            var idle = state.LinkCache.Resolve<IIdleAnimationGetter>(idleKey);
-            IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-            return idleCopy;
+            return state.PatchMod.IdleAnimations.GetOrAddAsOverride(idleLink, state.LinkCache);
         }
 
         /**
@@ -195,7 +194,6 @@ namespace Engarde_Synthesis
 
         private static void SetGeneralAttackData(IAttack attack)
         {
-            if (!IsValidAttack(attack)) return;
             string attackEvent = attack.AttackEvent!;
             attack.AttackData!.Knockdown = 0;
 
@@ -323,18 +321,13 @@ namespace Engarde_Synthesis
 
         private static void SetAtronachFrostAttackData(IAttack attack)
         {
-            if (!IsValidAttack(attack))
-            {
-                return;
-            }
-
             string attackEvent = attack.AttackEvent!;
             attack.AttackData!.Spell = Engarde.Spell.MCT_PowerAttackSpell;
             switch (attackEvent)
             {
                 case "attackPowerStart_ForwardPowerAttack_R1":
                     ChangeBasicAttackStats(attack, attackChance: 5);
-                    attack.AttackData.AttackType.SetTo(FormLink<IKeywordGetter>.Null);
+                    attack.AttackData.AttackType.SetToNull();
                     break;
                 case "attackPowerStart_PowerAttack_L1":
                     ChangeBasicAttackStats(attack, attackChance: 0.7f, attackAngle: -15);
@@ -355,11 +348,6 @@ namespace Engarde_Synthesis
 
         private static void SetWerewolfAttackData(IAttack attack, bool isWerebeast, bool growlEnabled)
         {
-            if (!IsValidAttack(attack))
-            {
-                return;
-            }
-
             string attackEvent = attack.AttackEvent!;
             attack.AttackData!.Knockdown = 0;
             if (isWerebeast)
@@ -376,7 +364,7 @@ namespace Engarde_Synthesis
                     attack.AttackData.Flags = AttackData.Flag.BashAttack;
                     ChangeBasicAttackStats(attack, 45);
                     attack.AttackData.DamageMult = 0.3f;
-                    attack.AttackData.Spell.SetTo(FormLink<ISpellGetter>.Null);
+                    attack.AttackData.Spell.SetToNull();
                     return;
                 case "AttackStartDualSprinting":
                 case "AttackStartLeftSprinting":
@@ -436,11 +424,6 @@ namespace Engarde_Synthesis
 
         private static void SetBearAttackData(IAttack attack)
         {
-            if (!IsValidAttack(attack))
-            {
-                return;
-            }
-
             string attackEvent = attack.AttackEvent!;
             switch (attackEvent)
             {
@@ -467,11 +450,6 @@ namespace Engarde_Synthesis
 
         private static void SetDwarvenSphereAttackData(IAttack attack)
         {
-            if (!IsValidAttack(attack))
-            {
-                return;
-            }
-
             string attackEvent = attack.AttackEvent!;
             if (attackEvent.Contains("Chop"))
             {
@@ -485,11 +463,6 @@ namespace Engarde_Synthesis
 
         private static void SetDwarvenCenturionAttackData(IAttack attack)
         {
-            if (!IsValidAttack(attack))
-            {
-                return;
-            }
-
             string attackEvent = attack.AttackEvent!;
             if (_settings.Value.staggerSettings.weaponStagger)
             {
@@ -501,30 +474,30 @@ namespace Engarde_Synthesis
                 case "attackStartBack":
                 case "attackStartRight":
                     ChangeBasicAttackStats(attack, 70, attackAngle: 150);
-                    attack.AttackData!.AttackType.SetTo(FormLink<IKeywordGetter>.Null);
+                    attack.AttackData!.AttackType.SetToNull();
                     break;
                 case "attackStartLeft":
                     ChangeBasicAttackStats(attack, 70, attackAngle: -150);
-                    attack.AttackData!.AttackType.SetTo(FormLink<IKeywordGetter>.Null);
+                    attack.AttackData!.AttackType.SetToNull();
                     break;
                 case "attackStartForwardPowerLeft":
                 case "attackStartForwardPowerRushLeft":
                     ChangeBasicAttackStats(attack, 60, attackAngle: -10);
-                    attack.AttackData!.AttackType.SetTo(FormLink<IKeywordGetter>.Null);
+                    attack.AttackData!.AttackType.SetToNull();
                     break;
                 case "attackStartForwardPowerRight":
                     ChangeBasicAttackStats(attack, 60, attackAngle: 10);
-                    attack.AttackData!.AttackType.SetTo(FormLink<IKeywordGetter>.Null);
+                    attack.AttackData!.AttackType.SetToNull();
                     attack.AttackData.DamageMult = 2;
                     break;
                 case "attackStartSlash":
                     ChangeBasicAttackStats(attack, 70, attackAngle: -20);
-                    attack.AttackData!.AttackType.SetTo(FormLink<IKeywordGetter>.Null);
+                    attack.AttackData!.AttackType.SetToNull();
                     attack.AttackData.DamageMult = 0.75f;
                     break;
                 case "bashStart":
                     ChangeBasicAttackStats(attack, 70, attackAngle: 20);
-                    attack.AttackData!.AttackType.SetTo(FormLink<IKeywordGetter>.Null);
+                    attack.AttackData!.AttackType.SetToNull();
                     attack.AttackData.DamageMult = 0.5f;
                     break;
                 case "attackStartStab":
@@ -538,11 +511,6 @@ namespace Engarde_Synthesis
 
         private static void SetDragonAttackData(IAttack attack)
         {
-            if (!IsValidAttack(attack))
-            {
-                return;
-            }
-
             string attackEvent = attack.AttackEvent!;
             switch (attackEvent)
             {
@@ -561,20 +529,20 @@ namespace Engarde_Synthesis
                 case "attackStartTail":
                     ChangeBasicAttackStats(attack, 15, 2);
                     attack.AttackData!.DamageMult = 0;
-                    attack.AttackData.Spell.SetTo(FormLink<ISpellGetter>.Null);
+                    attack.AttackData.Spell.SetToNull();
                     attack.AttackData.AttackType = Engarde.Keyword.MCT_DragonTailAttack;
                     break;
                 case "attackStartTailLeft":
                     ChangeBasicAttackStats(attack, 40, attackAngle: 110);
                     attack.AttackData!.DamageMult = 0;
-                    attack.AttackData.Spell.SetTo(FormLink<ISpellGetter>.Null);
+                    attack.AttackData.Spell.SetToNull();
                     attack.AttackData.AttackType = Engarde.Keyword.MCT_DragonTailAttackLeft;
                     attack.AttackData.Flags |= AttackData.Flag.RotatingAttack;
                     break;
                 case "attackStartTailRight":
                     ChangeBasicAttackStats(attack, 40, attackAngle: -110);
                     attack.AttackData!.DamageMult = 0;
-                    attack.AttackData.Spell.SetTo(FormLink<ISpellGetter>.Null);
+                    attack.AttackData.Spell.SetToNull();
                     attack.AttackData.AttackType = Engarde.Keyword.MCT_DragonTailAttackRight;
                     attack.AttackData.Flags |= AttackData.Flag.RotatingAttack;
                     break;
@@ -595,11 +563,6 @@ namespace Engarde_Synthesis
 
         private static void SetFalmerAttackData(IAttack attack)
         {
-            if (!IsValidAttack(attack))
-            {
-                return;
-            }
-
             string attackEvent = attack.AttackEvent!;
             switch (attackEvent)
             {
@@ -614,11 +577,6 @@ namespace Engarde_Synthesis
 
         private static void SetSpiderAttackData(IAttack attack, FormLink<ISpellGetter> attackSpellForm)
         {
-            if (!IsValidAttack(attack))
-            {
-                return;
-            }
-
             string attackEvent = attack.AttackEvent!;
             if (attackEvent == "AttackStartLungeBite")
             {
@@ -639,11 +597,6 @@ namespace Engarde_Synthesis
 
         private static void SetGiantAttackData(IAttack attack, bool isGiant)
         {
-            if (!IsValidAttack(attack))
-            {
-                return;
-            }
-
             string attackEvent = attack.AttackEvent!;
             switch (attackEvent)
             {
@@ -686,11 +639,6 @@ namespace Engarde_Synthesis
 
         private static void SetTrollAttackData(IAttack attack)
         {
-            if (!IsValidAttack(attack))
-            {
-                return;
-            }
-
             string attackEvent = attack.AttackEvent!;
             if (attackEvent.Contains("attackStartLeft"))
             {
@@ -712,15 +660,14 @@ namespace Engarde_Synthesis
 
         private static void PatchArmors(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (IArmorGetter? armor in state.LoadOrder.PriorityOrder.WinningOverrides<IArmorGetter>())
-            {
-                if ((armor.BodyTemplate?.Flags.HasFlag(BodyTemplate.Flag.NonPlayable) ?? true) ||
-                    !armor.TemplateArmor.IsNull ||
-                    (!armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? true))
-                {
-                    continue;
-                }
+            static bool Predicate(IArmorGetter armor) =>
+                (!armor.BodyTemplate?.Flags.HasFlag(BodyTemplate.Flag.NonPlayable) ?? false) &&
+                armor.TemplateArmor.IsNull &&
+                (armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? false);
 
+            foreach (IArmorGetter armor in state.LoadOrder.PriorityOrder.Armor().WinningOverrides()
+                .Where(Predicate))
+            {
                 switch (armor.BodyTemplate!.ArmorType)
                 {
                     case ArmorType.LightArmor:
@@ -738,6 +685,7 @@ namespace Engarde_Synthesis
                         armorCopy.Keywords.Add(Engarde.Keyword.MCT_ArmoredKW);
                         break;
                     }
+                    case ArmorType.Clothing: continue;
                     default: continue;
                 }
             }
@@ -767,13 +715,9 @@ namespace Engarde_Synthesis
 
         private static void PatchWeapons(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (IWeaponGetter weapon in state.LoadOrder.PriorityOrder.WinningOverrides<IWeaponGetter>())
+            foreach (IWeaponGetter weapon in state.LoadOrder.PriorityOrder.Weapon().WinningOverrides()
+                .Where(weapon => weapon.Template.IsNull && weapon.Data != null))
             {
-                if (!weapon.Template.IsNull || weapon.Data == null)
-                {
-                    continue;
-                }
-
                 Weapon weaponCopy = state.PatchMod.Weapons.GetOrAddAsOverride(weapon);
                 weaponCopy.Data!.Speed *= _settings.Value.weaponSettings.weaponSpeedMult;
                 weaponCopy.Data!.Reach *= _settings.Value.weaponSettings.weaponReachMult;
@@ -825,12 +769,12 @@ namespace Engarde_Synthesis
                         break;
                     case WeaponAnimationType.TwoHandSword:
                     case WeaponAnimationType.TwoHandAxe
-                        when weaponCopy.Keywords?.Contains(Skyrim.Keyword.WeapTypeGreatsword) ?? false:
+                        when weaponCopy.HasKeyword(Skyrim.Keyword.WeapTypeGreatsword):
                         weaponCopy.ChangeWeapon(14, 0.9f, 1.15f, staggerMult: 1.35f, critChance: WeaponCritChance.Low,
                             armorPenetration: WeaponArmorPenetration.Weak);
                         break;
                     case WeaponAnimationType.TwoHandAxe
-                        when weaponCopy.Keywords?.Contains(Skyrim.Keyword.WeapTypeWarhammer) ?? false:
+                        when weaponCopy.HasKeyword(Skyrim.Keyword.WeapTypeWarhammer):
                         weaponCopy.ChangeWeapon(18, 0.9f, speedMult: 0.9f, critMult: 0.5f, staggerMult: 1.65f,
                             armorPenetration: WeaponArmorPenetration.Strong);
                         break;
@@ -852,19 +796,16 @@ namespace Engarde_Synthesis
                         weaponCopy.ChangeWeapon(8, reachMult: 1.15f, critMult: 0.5f,
                             armorPenetration: WeaponArmorPenetration.Weak);
                         break;
+                    default: continue;
                 }
             }
         }
 
         private static void PatchRaces(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (var race in state.LoadOrder.PriorityOrder.WinningOverrides<IRaceGetter>())
+            foreach (var race in state.LoadOrder.PriorityOrder.Race().WinningOverrides()
+                .Where(race => race.EditorID != null))
             {
-                if (race.EditorID == null)
-                {
-                    continue;
-                }
-
                 Race raceCopy = state.PatchMod.Races.GetOrAddAsOverride(race);
                 bool growlEnabled =
                     state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp"));
@@ -887,10 +828,10 @@ namespace Engarde_Synthesis
 
                 if (raceCopy.EditorID != "WerewolfBeastRace")
                 {
-                    raceCopy.Attacks.ForEach(SetGeneralAttackData);
+                    raceCopy.Attacks.Where(IsValidAttack).ForEach(SetGeneralAttackData);
                 }
 
-                if (raceCopy.HasKeyword("ActorTypeUndead", state.LinkCache))
+                if (raceCopy.HasKeyword(Skyrim.Keyword.ActorTypeUndead))
                 {
                     raceCopy.AddKeyword(Engarde.Keyword.MCT_CritImmune);
                     raceCopy.AddKeyword(Engarde.Keyword.MCT_NoStamina);
@@ -921,7 +862,7 @@ namespace Engarde_Synthesis
 
                         raceCopy.AngularAccelerationRate = 0.75f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 156;
-                        raceCopy.Attacks.ForEach(SetAtronachFrostAttackData);
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(SetAtronachFrostAttackData);
 
                         if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dwarfsphere.esp")) &&
                             (raceCopy.EditorID?.StartsWith("DwaSp") ?? false) &&
@@ -966,17 +907,14 @@ namespace Engarde_Synthesis
                         raceCopy.UnarmedDamage *= 1.5f;
                         raceCopy.UnarmedReach *= 0.8f;
 
-                        raceCopy.Attacks.ForEach(SetBearAttackData);
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(SetBearAttackData);
                         break;
                     case "Actors\\DLC02\\BoarRiekling\\BoarProject.hkx":
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
 
-                        raceCopy.Attacks.ForEach(x =>
-                        {
-                            if (!IsValidAttack(x)) return;
-                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                        });
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(x =>
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack);
                         break;
                     case "Actors\\Cow\\HighlandCowProject.hkx":
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
@@ -1062,7 +1000,7 @@ namespace Engarde_Synthesis
                             raceCopy.UnarmedDamage = 100;
                         }
 
-                        raceCopy.Attacks.ForEach(SetDragonAttackData);
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(SetDragonAttackData);
                         break;
                     }
                     case "Actors\\Draugr\\DraugrProject.hkx":
@@ -1125,7 +1063,7 @@ namespace Engarde_Synthesis
                         raceCopy.BaseMass = 8;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 200;
-                        raceCopy.Attacks.ForEach(SetDwarvenCenturionAttackData);
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(SetDwarvenCenturionAttackData);
                         break;
                     }
                     case "Actors\\DwarvenSphereCenturion\\SphereCenturion.hkx":
@@ -1143,7 +1081,7 @@ namespace Engarde_Synthesis
                         raceCopy.BaseMass = 2.5f;
                         raceCopy.AngularAccelerationRate = 0.12f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 102;
-                        raceCopy.Attacks.ForEach(SetDwarvenSphereAttackData);
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(SetDwarvenSphereAttackData);
                         break;
                     }
                     case "Actors\\DwarvenSpider\\DwarvenSpiderCenturionProject.hkx":
@@ -1176,7 +1114,7 @@ namespace Engarde_Synthesis
                         raceCopy.BaseMass = 1.5f;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 77;
-                        raceCopy.Attacks.ForEach(SetFalmerAttackData);
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(SetFalmerAttackData);
                         break;
                     case "Actors\\FrostbiteSpider\\FrostbiteSpiderProject.hkx":
                     {
@@ -1190,7 +1128,7 @@ namespace Engarde_Synthesis
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
                             raceCopy.BaseMass = 3;
                             var spellFormKey = Skyrim.Spell.crSpider03PoisonBite;
-                            raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
+                            raceCopy.Attacks.Where(IsValidAttack).ForEach(x => SetSpiderAttackData(x, spellFormKey));
                         }
                         else if (raceCopy.EditorID.Contains("Large"))
                         {
@@ -1198,7 +1136,7 @@ namespace Engarde_Synthesis
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
                             raceCopy.BaseMass = 1;
                             var spellFormKey = Skyrim.Spell.crSpider02PoisonBite;
-                            raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
+                            raceCopy.Attacks.Where(IsValidAttack).ForEach(x => SetSpiderAttackData(x, spellFormKey));
                         }
                         else
                         {
@@ -1206,7 +1144,7 @@ namespace Engarde_Synthesis
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower0);
                             raceCopy.BaseMass = 0.2f;
                             var spellFormKey = Skyrim.Spell.crSpider01PoisonBite;
-                            raceCopy.Attacks.ForEach(x => SetSpiderAttackData(x, spellFormKey));
+                            raceCopy.Attacks.Where(IsValidAttack).ForEach(x => SetSpiderAttackData(x, spellFormKey));
                         }
 
                         break;
@@ -1252,7 +1190,7 @@ namespace Engarde_Synthesis
                             raceCopy.Regen[BasicStat.Stamina] = 1;
                         }
 
-                        raceCopy.Attacks.ForEach(x => SetGiantAttackData(x, isGiant ?? false));
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(x => SetGiantAttackData(x, isGiant ?? false));
                         break;
                     }
                     case "Actors\\Goat\\GoatProject.hkx":
@@ -1342,22 +1280,17 @@ namespace Engarde_Synthesis
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 64;
 
-                        raceCopy.Attacks.ForEach(x =>
-                        {
-                            if (!IsValidAttack(x)) return;
-                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                        });
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(x =>
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack);
                         break;
                     case "Actors\\DLC02\\Riekling\\RieklingProject.hkx":
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
 
                         raceCopy.BaseMass = 1;
-                        raceCopy.Attacks.ForEach(x =>
-                        {
-                            if (!IsValidAttack(x)) return;
-                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                        });
+
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(x =>
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack);
                         break;
                     case "Actors\\SabreCat\\SabreCatProject.hkx":
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist2);
@@ -1369,11 +1302,8 @@ namespace Engarde_Synthesis
                         raceCopy.UnarmedReach = 68;
                         raceCopy.UnarmedDamage *= 1.2f;
 
-                        raceCopy.Attacks.ForEach(x =>
-                        {
-                            if (!IsValidAttack(x)) return;
-                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                        });
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(x =>
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack);
                         break;
                     case "Actors\\Skeever\\SkeeverProject.hkx":
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist0);
@@ -1382,11 +1312,8 @@ namespace Engarde_Synthesis
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 64;
 
-                        raceCopy.Attacks.ForEach(x =>
-                        {
-                            if (!IsValidAttack(x)) return;
-                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                        });
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(x =>
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack);
                         break;
                     case "Actors\\Spriggan\\Spriggan.hkx":
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
@@ -1404,7 +1331,7 @@ namespace Engarde_Synthesis
                         raceCopy.BaseMass = 3;
                         raceCopy.AngularAccelerationRate = 0.25f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 112;
-                        raceCopy.Attacks.ForEach(SetTrollAttackData);
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(SetTrollAttackData);
                         break;
                     case "Actors\\VampireLord\\VampireLord.hkx":
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerImmune);
@@ -1471,7 +1398,7 @@ namespace Engarde_Synthesis
                             raceCopy.UnarmedDamage = 8 * _settings.Value.npcSettings.unarmedDamageMult;
                         }
 
-                        raceCopy.Attacks.ForEach(attack => SetWerewolfAttackData(attack, isWerebeast, growlEnabled));
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(attack => SetWerewolfAttackData(attack, isWerebeast, growlEnabled));
                         break;
                     }
                     case "Actors\\Wisp\\WispProject.hkx":
@@ -1500,11 +1427,8 @@ namespace Engarde_Synthesis
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_InjuryBleed);
                         raceCopy.AngularAccelerationRate = 0.3f * _settings.Value.npcSettings.angularAccelerationMult;
                         raceCopy.UnarmedReach = 64;
-                        raceCopy.Attacks.ForEach(x =>
-                        {
-                            if (!IsValidAttack(x)) return;
-                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
-                        });
+                        raceCopy.Attacks.Where(IsValidAttack).ForEach(x =>
+                            x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack);
                         break;
                 }
             }
@@ -1513,10 +1437,9 @@ namespace Engarde_Synthesis
         private static void PatchPerks(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             static IPerk CopyPerk(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState,
-                FormLink<IPerkGetter> perkLink)
+                IFormLinkGetter<IPerkGetter> perkLink)
             {
-                patcherState.PatchMod.Perks.TryGetOrAddAsOverride(perkLink, patcherState.LinkCache, out var perkCopy);
-                return perkCopy!;
+                return patcherState.PatchMod.Perks.GetOrAddAsOverride(perkLink, patcherState.LinkCache);
             }
 
             IPerk perkCopy = CopyPerk(state, Engarde.Perk.MCT_MultDamageOnForwardPowerAttack);
@@ -1538,29 +1461,28 @@ namespace Engarde_Synthesis
 
         private static void PatchNpcs(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (INpcGetter npc in state.LoadOrder.PriorityOrder.WinningOverrides<INpcGetter>())
+            bool Predicate(INpcGetter npc)
             {
-                string? npcRaceEdid = npc.Race.Resolve(state.LinkCache)!.EditorID;
-                if (npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.SpellList) ||
-                    npc.Race.IsNull || npcRaceEdid.IsNullOrEmpty())
-                {
-                    continue;
-                }
+                string npcRaceEdid = npc.Race.Resolve(state.LinkCache).EditorID!;
+                return !npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.SpellList) &&
+                       !npc.Race.IsNull && !npcRaceEdid.IsNullOrEmpty() && (npc.Attacks.Count != 0 ||
+                                                                            npcRaceEdid.Contains("GiantRace") ||
+                                                                            npcRaceEdid.Contains("LurkerRace"));
+            }
 
-                if (!( /*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
-                      || npcRaceEdid == "AlduinRace" ||*/ npcRaceEdid.Contains("GiantRace") ||
-                                                          npcRaceEdid.Contains("LurkerRace") || npc.Attacks.Count != 0))
-                {
-                    continue;
-                }
+            foreach (INpcGetter npc in state.LoadOrder.PriorityOrder.Npc().WinningOverrides().Where(Predicate))
+            {
+                string npcRaceEdid = npc.Race.Resolve(state.LinkCache).EditorID!;
+
+                /*npcRaceEdid!.Contains("Dragon") && !npcRaceEdid.Contains("Priest")
+                || npcRaceEdid == "AlduinRace" ||*/
 
                 if (_settings.Value.staggerSettings.weaponStagger)
                 {
                     Npc npcCopy = npc.DeepCopy();
                     bool changed = false;
-                    npcCopy.Attacks.ForEach(attack =>
+                    npcCopy.Attacks.Where(IsValidAttack).ForEach(attack =>
                     {
-                        if (!IsValidAttack(attack)) return;
                         if (attack.AttackData!.Spell.IsNull &&
                             !attack.AttackData.Flags.HasFlag(AttackData.Flag.BashAttack))
                         {
@@ -1585,9 +1507,9 @@ namespace Engarde_Synthesis
 
         private static void PatchAttacks(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            var leftHandAttack = new FormLink<IIdleRelationGetter>(Skyrim.IdleAnimation.LeftHandAttack);
-            var mctAttackLeftH2H = new FormLink<IIdleRelationGetter>(Engarde.IdleAnimation.MCTAttackLeftH2H);
-            var nonMountedCombatRight = new FormLink<IIdleRelationGetter>(Update.IdleAnimation.NonMountedCombatRight);
+            var leftHandAttack = Skyrim.IdleAnimation.LeftHandAttack;
+            var mctAttackLeftH2H = Engarde.IdleAnimation.MCTAttackLeftH2H;
+            var nonMountedCombatRight = Update.IdleAnimation.NonMountedCombatRight;
             IFormLink<IIdleRelationGetter> originalNormalAttackSibling = new FormLink<IIdleRelationGetter>();
             IFormLink<IIdleRelationGetter> originalH2HAttackSibling = new FormLink<IIdleRelationGetter>();
             IFormLink<IIdleRelationGetter> originalLeftHandAttackSibling = new FormLink<IIdleRelationGetter>();
@@ -1597,7 +1519,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = _settings.Value.staminaSettings.minimumStamina,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetActorValue, ParameterOneNumber = 26
+                    Function = ConditionData.Function.GetActorValue, ParameterOneNumber = 26
                 }
             };
             ConditionFloat staminaPercentCondition = new()
@@ -1606,7 +1528,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 0.5f,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetActorValuePercent, ParameterOneNumber = 26
+                    Function = ConditionData.Function.GetActorValuePercent, ParameterOneNumber = 26
                 }
             };
             ConditionFloat lastAttackIsRightCondition = new()
@@ -1615,7 +1537,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 1,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetVMQuestVariable,
+                    Function = ConditionData.Function.GetVMQuestVariable,
                     ParameterOneRecord = Engarde.Quest.MCT_StatChecker,
                     ParameterTwoString = "::lastAttackIsRightHand_var"
                 }
@@ -1626,7 +1548,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 1,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetVMQuestVariable,
+                    Function = ConditionData.Function.GetVMQuestVariable,
                     ParameterOneRecord = Engarde.Quest.MCT_StatChecker,
                     ParameterTwoString = "::isStaggeringAttack_var"
                 }
@@ -1660,7 +1582,7 @@ namespace Engarde_Synthesis
                 idleCopy = CopyIdle(state, Skyrim.IdleAnimation.PlayerStagger);
                 ConditionData getAttackState = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetAttackState
+                    Function = ConditionData.Function.GetAttackState
                 };
                 idleCopy.Conditions.Add(new ConditionFloat
                 {
@@ -1702,11 +1624,9 @@ namespace Engarde_Synthesis
 
             if (_settings.Value.powerAttacks.powerAttackTweaks)
             {
-                var idle = state.LinkCache.Resolve<IIdleAnimationGetter>(Engarde.IdleAnimation.MCTPowerAttack);
-                IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-                idleCopy.RelatedIdles[0] = new FormLink<IIdleAnimationGetter>(Skyrim.IdleAnimation.SheathRight);
-                idleCopy.RelatedIdles[1] =
-                    new FormLink<IIdleAnimationGetter>(Skyrim.IdleAnimation.DefaultSheathe);
+                IIdleAnimation idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTPowerAttack);
+                idleCopy.RelatedIdles[0] = Skyrim.IdleAnimation.SheathRight;
+                idleCopy.RelatedIdles[1] = Skyrim.IdleAnimation.DefaultSheathe;
             }
 
             if (_settings.Value.npcSettings.dragonTweaks)
@@ -1726,8 +1646,7 @@ namespace Engarde_Synthesis
 
             if (_settings.Value.basicAttacks.dwAttackTweaks)
             {
-                var idle = state.LinkCache.Resolve<IIdleAnimationGetter>(Skyrim.IdleAnimation.BlockingStart);
-                IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.BlockingStart);
                 idleCopy.RelatedIdles[1] = originalLeftHandAttackSibling;
             }
         }
@@ -1740,7 +1659,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 0,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetIsID,
+                    Function = ConditionData.Function.GetIsID,
                     ParameterOneRecord = Skyrim.Npc.Player,
                 }
             };
@@ -1773,20 +1692,14 @@ namespace Engarde_Synthesis
 
         private static void PatchDodges(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>()
-            )
+            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.IdleAnimation().WinningOverrides().Where(idle => !idle.EditorID.IsNullOrEmpty()))
             {
                 if (!_settings.Value.defensiveActions.defensiveActions)
                 {
                     break;
                 }
 
-                if (idle.EditorID.IsNullOrEmpty())
-                {
-                    continue;
-                }
-
-                if (idle.EditorID.Contains("MCTHeavyArmorDodge") || idle.EditorID.Contains("MCTLightArmorDodge"))
+                if (idle.EditorID!.Contains("MCTHeavyArmorDodge") || idle.EditorID.Contains("MCTLightArmorDodge"))
                 {
                     IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                     ConditionFloat condition = (ConditionFloat) idleCopy.Conditions[0];
@@ -1873,7 +1786,7 @@ namespace Engarde_Synthesis
             }
 
             IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfSheathe);
-            idleCopy.RelatedIdles[1] = new FormLink<IIdleRelationGetter>(Engarde.IdleAnimation.MCTPowerAttackRootBeast);
+            idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTPowerAttackRootBeast;
 
             ConditionFloat condition = new()
             {
@@ -1881,7 +1794,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = _settings.Value.staminaSettings.minimumStamina,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetActorValue, ParameterOneNumber = 26
+                    Function = ConditionData.Function.GetActorValue, ParameterOneNumber = 26
                 }
             };
 
@@ -1901,8 +1814,7 @@ namespace Engarde_Synthesis
             idleCopy.Conditions[3].CompareOperator = CompareOperator.NotEqualTo;
 
             idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTPowerAttackRootBeast);
-            idleCopy.RelatedIdles[0] =
-                new FormLink<IIdleRelationGetter>(Skyrim.IdleAnimation.WerewolfSheathRoot);
+            idleCopy.RelatedIdles[0] = Skyrim.IdleAnimation.WerewolfSheathRoot;
         }
 
         private static void PatchKillmoves(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1918,9 +1830,9 @@ namespace Engarde_Synthesis
                 ComparisonValue = 0,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetIsID,
+                    Function = ConditionData.Function.GetIsID,
                     ParameterOneRecord = Skyrim.Npc.Player,
-                    Unknown3 = (int) Condition.RunOnType.Target // run on
+                    RunOnType = Condition.RunOnType.Target
                 }
             };
 
@@ -1939,17 +1851,12 @@ namespace Engarde_Synthesis
 
         private static void PatchIdles(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.WinningOverrides<IIdleAnimationGetter>()
-            )
+            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.IdleAnimation().WinningOverrides()
+                .Where(idle => idle.EditorID != "MCTDefensiveMoves" && idle.EditorID != "BlockHit" &&
+                               idle.EditorID != "SneakStart" && idle.EditorID != "SneakStop"))
             {
-                if (idle.EditorID == "MCTDefensiveMoves" || idle.EditorID == "BlockHit" ||
-                    idle.EditorID == "SneakStart" || idle.EditorID == "SneakStop")
-                {
-                    continue;
-                }
-
                 if (_settings.Value.defensiveActions.defensiveActions && Equals(idle.RelatedIdles[0],
-                    new FormLink<IIdleRelationGetter>(Skyrim.IdleAnimation.SneakRoot)) && idle.RelatedIdles[1].IsNull)
+                    Skyrim.IdleAnimation.SneakRoot) && idle.RelatedIdles[1].IsNull)
                 {
                     Condition wantToSneak = new ConditionFloat
                     {
@@ -1957,15 +1864,14 @@ namespace Engarde_Synthesis
                         ComparisonValue = 1,
                         Data = new FunctionConditionData
                         {
-                            Function = (ushort) ConditionData.Function.GetVMQuestVariable,
+                            Function = ConditionData.Function.GetVMQuestVariable,
                             ParameterOneRecord = Engarde.Quest.MCT_SneakKeyListener,
                             ParameterTwoString = "::wantsToSneak_var"
                         }
                     };
                     IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                     idleCopy.Conditions.Add(wantToSneak);
-                    idleCopy.RelatedIdles[1] =
-                        new FormLink<IIdleRelationGetter>(Engarde.IdleAnimation.MCTDefensiveMoves);
+                    idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTDefensiveMoves;
                     _foundAnotherSneakRootChild = true;
                 }
             }
@@ -1979,7 +1885,7 @@ namespace Engarde_Synthesis
                 CompareOperator = CompareOperator.EqualTo,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.HasMagicEffect,
+                    Function = ConditionData.Function.HasMagicEffect,
                     ParameterOneRecord = Engarde.MagicEffect.MCT_PowerBlocking
                 }
             };
@@ -1989,7 +1895,7 @@ namespace Engarde_Synthesis
                 CompareOperator = CompareOperator.NotEqualTo,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetMovementDirection
+                    Function = ConditionData.Function.GetMovementDirection
                 }
             };
             Condition isNotPlayer = new ConditionFloat
@@ -1999,7 +1905,7 @@ namespace Engarde_Synthesis
                 Flags = Condition.Flag.OR,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetIsID,
+                    Function = ConditionData.Function.GetIsID,
                     ParameterOneRecord = Skyrim.Npc.Player
                 }
             };
@@ -2010,7 +1916,7 @@ namespace Engarde_Synthesis
                 Flags = Condition.Flag.OR,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetVMQuestVariable,
+                    Function = ConditionData.Function.GetVMQuestVariable,
                     ParameterOneRecord = Engarde.Quest.MCT_SneakKeyListener,
                     ParameterTwoString = "::wantsToSneak_var"
                 }
@@ -2022,7 +1928,7 @@ namespace Engarde_Synthesis
                 Flags = Condition.Flag.OR,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.IsBlocking
+                    Function = ConditionData.Function.IsBlocking
                 }
             };
             Condition isStaggered = new ConditionFloat
@@ -2032,7 +1938,7 @@ namespace Engarde_Synthesis
                 Flags = Condition.Flag.OR,
                 Data = new FunctionConditionData
                 {
-                    Function = (ushort) ConditionData.Function.GetGraphVariableInt,
+                    Function = ConditionData.Function.GetGraphVariableInt,
                     ParameterOneString = "IsStaggering"
                 }
             };
@@ -2043,7 +1949,7 @@ namespace Engarde_Synthesis
                 idleCopy.Conditions.Add(isPowerBlocking);
 
                 idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTDefensiveMoves);
-                idleCopy.RelatedIdles[0] = new FormLink<IIdleRelationGetter>(Skyrim.IdleAnimation.SneakRoot);
+                idleCopy.RelatedIdles[0] = Skyrim.IdleAnimation.SneakRoot;
 
                 if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Ultimate Dodge Mod.esp")))
                 {
@@ -2066,8 +1972,7 @@ namespace Engarde_Synthesis
 
                 if (!_foundAnotherSneakRootChild)
                 {
-                    idleCopy.RelatedIdles[1] =
-                        new FormLink<IIdleRelationGetter>(Engarde.IdleAnimation.MCTDefensiveMoves);
+                    idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTDefensiveMoves;
                 }
             }
 
@@ -2083,14 +1988,11 @@ namespace Engarde_Synthesis
             static IMagicEffect CopyEffect(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
                 IFormLinkGetter<IMagicEffectGetter> formLink)
             {
-                state.PatchMod.MagicEffects.TryGetOrAddAsOverride(formLink, state.LinkCache,
-                    out MagicEffect? recordCopy);
-                return recordCopy!;
+                return state.PatchMod.MagicEffects.GetOrAddAsOverride(formLink, state.LinkCache);
             }
 
             VirtualMachineAdapter fireScript = new()
             {
-                ObjectFormat = (ushort) 2,
                 Scripts =
                 {
                     new ScriptEntry
@@ -2111,7 +2013,6 @@ namespace Engarde_Synthesis
             };
             VirtualMachineAdapter frostScript = new()
             {
-                ObjectFormat = (ushort) 2,
                 Scripts =
                 {
                     new ScriptEntry
@@ -2140,18 +2041,19 @@ namespace Engarde_Synthesis
                     CopyEffect(state, Skyrim.MagicEffect.VoiceDragonFrostIceStormEffect)
                 };
 
-                dragonBreaths.ForEach(effect => { effect.ResistValue = ActorValue.None; });
                 for (int i = 0; i < 2; i++) // fire effects
                 {
                     dragonBreaths[i].AddKeyword(Engarde.Keyword.MCT_BlockableSpell);
                     dragonBreaths[i].TaperDuration = 0.5f;
                     dragonBreaths[i].VirtualMachineAdapter = fireScript;
+                    dragonBreaths[i].ResistValue = ActorValue.None;
                 }
 
                 for (int i = 2; i < 4; i++) //frost effects
                 {
                     dragonBreaths[i].SecondActorValueWeight = 0.1f; // less stamina damage
                     dragonBreaths[i].VirtualMachineAdapter = frostScript;
+                    dragonBreaths[i].ResistValue = ActorValue.None;
                 }
 
                 //is it better than doing it for each effect separately?
@@ -2269,9 +2171,7 @@ namespace Engarde_Synthesis
             static ISpell CopySpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState,
                 IFormLinkGetter<ISpellGetter> spellLink)
             {
-                patcherState.PatchMod.Spells.TryGetOrAddAsOverride(spellLink, patcherState.LinkCache,
-                    out Spell? spellCopy);
-                return spellCopy!;
+                return patcherState.PatchMod.Spells.GetOrAddAsOverride(spellLink, patcherState.LinkCache);
             }
 
             static void TuneLDragonSpell(ISpell spell, int increment, int duration)
@@ -2431,7 +2331,7 @@ namespace Engarde_Synthesis
                 };
                 spellCopy = CopySpell(state, Skyrim.Spell.crGiantClubSlam);
                 spellCopy.Effects.RemoveAll(x =>
-                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantSlam);
+                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantSlam.FormKey);
 
                 spellCopy.Effects.Add(staggerSmall);
                 spellCopy.Effects.Add(staggerBig);
@@ -2449,7 +2349,7 @@ namespace Engarde_Synthesis
 
                 spellCopy = CopySpell(state, Skyrim.Spell.crGiantStomp);
                 spellCopy.Effects.RemoveAll(x =>
-                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantStomp);
+                    x.BaseEffect.FormKey == Skyrim.MagicEffect.crStaggerAttackAreaEffectGiantStomp.FormKey);
                 spellCopy.Effects.Add(staggerSmall);
                 spellCopy.Effects.Add(staggerBig);
 
@@ -2480,11 +2380,11 @@ namespace Engarde_Synthesis
 
                 spellCopy = CopySpell(state, Skyrim.Spell.L_VoiceDragonFrost01);
                 TuneLDragonSpell(spellCopy, 10, 1);
-                spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
+                spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed.FormKey);
 
                 spellCopy = CopySpell(state, Skyrim.Spell.L_VoiceDragonFrostBall01);
                 TuneLDragonSpell(spellCopy, 10, 0);
-                spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
+                spellCopy.Effects.RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed.FormKey);
 
                 List<ISpell> dragonShouts = new()
                 {
@@ -2531,14 +2431,14 @@ namespace Engarde_Synthesis
                 {
                     TuneDragonBreathSpells(dragonShouts[i + 12], 20 + 10 * i, 1);
                     dragonShouts[i + 12].Effects
-                        .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
+                        .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed.FormKey);
                 }
 
                 for (int i = 0; i < 6; i++)
                 {
                     TuneDragonBreathSpells(dragonShouts[i + 18], 20 + 10 * i, 0);
                     dragonShouts[i + 18].Effects
-                        .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed);
+                        .RemoveAll(x => x.BaseEffect.FormKey == Skyrim.MagicEffect.FrostSlowConcAimed.FormKey);
                 }
             }
 
@@ -2556,14 +2456,14 @@ namespace Engarde_Synthesis
                     };
                     savageSkyrimSpells.ForEach(x =>
                         x.Effects.RemoveAll(effect =>
-                            effect.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_Stagger));
+                            effect.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_Stagger.FormKey));
 
                     savageSkyrimSpells.ForEach(AddStaggerEffects);
 
                     ISpell powerStaggerSpell = CopySpell(state, SavageSkyrim.Spell.__AA_Animal_ForceThrow_Small);
 
                     powerStaggerSpell.Effects.RemoveAll(x =>
-                        x.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_ForceThrow_2);
+                        x.BaseEffect.FormKey == SavageSkyrim.MagicEffect.__A2_STHC_ForceThrow_2.FormKey);
 
                     AddPowerStaggerEffects(powerStaggerSpell);
                 }
@@ -2614,7 +2514,7 @@ namespace Engarde_Synthesis
                     {
                         spellCopy = CopySpell(state, Growl.Spell.HRI_Werewolf_Spell_Attack);
                         AddStaggerEffects(spellCopy);
-                        EffectData staggerData = new EffectData
+                        EffectData staggerData = new()
                         {
                             Magnitude = 0,
                             Area = 0,
@@ -2727,39 +2627,36 @@ namespace Engarde_Synthesis
         }
 
         private static void PatchWeaponSpeedEffects(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
-            List<IFormLink<IMagicEffectGetter>> weaponSpeedEffects,
-            List<IFormLink<IMagicEffectGetter>> leftWeaponSpeedEffects)
+            List<IFormLinkNullable<IMagicEffectGetter>> weaponSpeedEffects,
+            List<IFormLinkNullable<IMagicEffectGetter>> leftWeaponSpeedEffects)
         {
-            foreach (IMagicEffectGetter effect in state.LoadOrder.PriorityOrder.WinningOverrides<IMagicEffectGetter>())
-            {
-                if (effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult ||
-                    effect.SecondActorValue == ActorValue.WeaponSpeedMult)
-                {
-                    weaponSpeedEffects.Add(effect.AsLink());
-                }
-
-                if (effect.Archetype.ActorValue == ActorValue.LeftWeaponSpeedMultiply ||
-                    effect.SecondActorValue == ActorValue.LeftWeaponSpeedMultiply)
-                {
-                    leftWeaponSpeedEffects.Add(effect.AsLink());
-                }
-            }
+            List<IMagicEffectGetter> winningOverrides =
+                state.LoadOrder.PriorityOrder.WinningOverrides<IMagicEffectGetter>().ToList();
+            
+            weaponSpeedEffects.AddRange(
+                winningOverrides
+                    .Where(effect =>
+                        effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult ||
+                        effect.SecondActorValue == ActorValue.WeaponSpeedMult)
+                    .Select(effect => effect.AsNullableLink()));
+            
+            leftWeaponSpeedEffects.AddRange(
+                winningOverrides
+                    .Where(effect =>
+                        effect.Archetype.ActorValue == ActorValue.LeftWeaponSpeedMultiply ||
+                        effect.SecondActorValue == ActorValue.LeftWeaponSpeedMultiply)
+                    .Select(effect => effect.AsNullableLink()));
         }
 
         private static void PatchWeaponSpeedSpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
-            List<IFormLink<IMagicEffectGetter>> weaponSpeedEffects,
-            List<IFormLink<IMagicEffectGetter>> leftWeaponSpeedEffects)
+            List<IFormLinkNullable<IMagicEffectGetter>> weaponSpeedEffects,
+            List<IFormLinkNullable<IMagicEffectGetter>> leftWeaponSpeedEffects)
         {
-            if (!_settings.Value.fixAttackSpeed)
-            {
-                return;
-            }
-
-            foreach (ISpellGetter spell in state.LoadOrder.PriorityOrder.WinningOverrides<ISpellGetter>())
+            foreach (ISpellGetter spell in state.LoadOrder.PriorityOrder.Spell().WinningOverrides())
             {
                 bool Predicate(IEffectGetter x) =>
-                    (weaponSpeedEffects.Contains(x.BaseEffect.FormKey) ||
-                     leftWeaponSpeedEffects.Contains(x.BaseEffect.FormKey)) && x.Data?.Magnitude > 1;
+                    (weaponSpeedEffects.Contains(x.BaseEffect) ||
+                     leftWeaponSpeedEffects.Contains(x.BaseEffect)) && x.Data?.Magnitude > 1;
 
                 bool haveWeaponSpeedEffect = spell.Effects.Any(Predicate);
                 if (haveWeaponSpeedEffect)
@@ -2775,11 +2672,9 @@ namespace Engarde_Synthesis
             if (_settings.Value.npcSettings.dragonTweaks)
             {
                 static Projectile CopyProjectile(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState,
-                    IFormLink<IProjectileGetter> projLink)
+                    IFormLinkGetter<IProjectileGetter> projLink)
                 {
-                    patcherState.PatchMod.Projectiles.TryGetOrAddAsOverride(projLink, patcherState.LinkCache,
-                        out var projectileCopy);
-                    return projectileCopy!;
+                    return patcherState.PatchMod.Projectiles.GetOrAddAsOverride(projLink, patcherState.LinkCache);
                 }
 
                 var projectileCopy = CopyProjectile(state, Skyrim.Projectile.DragonFrostProjectile01);
@@ -2800,11 +2695,10 @@ namespace Engarde_Synthesis
 
         private static void PatchMovement(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            static IMovementType CopyMovt(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
-                IFormLink<IMovementTypeGetter> formKey)
+            static IMovementType CopyMovt(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState,
+                IFormLink<IMovementTypeGetter> movtLink)
             {
-                state.PatchMod.MovementTypes.TryGetOrAddAsOverride(formKey, state.LinkCache, out MovementType? record);
-                return record!;
+                return patcherState.PatchMod.MovementTypes.GetOrAddAsOverride(movtLink, patcherState.LinkCache);
             }
 
             static void ChangeMovt(IMovementType movt, int speed, int forwardSpeed)
@@ -2861,8 +2755,6 @@ namespace Engarde_Synthesis
 
         private static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            List<IFormLink<IMagicEffectGetter>> weaponSpeedEffects = new();
-            List<IFormLink<IMagicEffectGetter>> leftWeaponSpeedEffects = new();
             state.PatchGlobals();
             PatchArmors(state);
             PatchWeapons(state);
@@ -2878,8 +2770,13 @@ namespace Engarde_Synthesis
             PatchDefensiveMoves(state);
             PatchEffects(state);
             PatchSpells(state);
-            PatchWeaponSpeedEffects(state, weaponSpeedEffects, leftWeaponSpeedEffects);
-            PatchWeaponSpeedSpell(state, weaponSpeedEffects, leftWeaponSpeedEffects);
+            if (_settings.Value.fixAttackSpeed)
+            {
+                List<IFormLinkNullable<IMagicEffectGetter>> weaponSpeedEffects = new();
+                List<IFormLinkNullable<IMagicEffectGetter>> leftWeaponSpeedEffects = new();
+                PatchWeaponSpeedEffects(state, weaponSpeedEffects, leftWeaponSpeedEffects);
+                PatchWeaponSpeedSpell(state, weaponSpeedEffects, leftWeaponSpeedEffects);
+            }
             PatchProjectiles(state);
             PatchMovement(state);
         }
