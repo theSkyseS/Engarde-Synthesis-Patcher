@@ -778,7 +778,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = _settings.Value.staminaSettings.minimumStamina,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetActorValue, ParameterOneNumber = 26
+                    Function = Condition.Function.GetActorValue, ParameterOneNumber = 26
                 }
             };
             ConditionFloat staminaPercentCondition = new()
@@ -787,7 +787,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 0.5f,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetActorValuePercent, ParameterOneNumber = 26
+                    Function = Condition.Function.GetActorValuePercent, ParameterOneNumber = 26
                 }
             };
             ConditionFloat lastAttackIsRightCondition = new()
@@ -796,7 +796,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 1,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetVMQuestVariable,
+                    Function = Condition.Function.GetVMQuestVariable,
                     ParameterOneRecord = Engarde.Quest.MCT_StatChecker,
                     ParameterTwoString = "::lastAttackIsRightHand_var"
                 }
@@ -807,7 +807,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 1,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetVMQuestVariable,
+                    Function = Condition.Function.GetVMQuestVariable,
                     ParameterOneRecord = Engarde.Quest.MCT_StatChecker,
                     ParameterTwoString = "::isStaggeringAttack_var"
                 }
@@ -841,7 +841,7 @@ namespace Engarde_Synthesis
                 idleCopy = CopyIdle(state, Skyrim.IdleAnimation.PlayerStagger);
                 ConditionData getAttackState = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetAttackState
+                    Function = Condition.Function.GetAttackState
                 };
                 idleCopy.Conditions.Add(new ConditionFloat
                 {
@@ -918,7 +918,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 0,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetIsID,
+                    Function = Condition.Function.GetIsID,
                     ParameterOneRecord = Skyrim.Npc.Player,
                 }
             };
@@ -1053,7 +1053,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = _settings.Value.staminaSettings.minimumStamina,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetActorValue, ParameterOneNumber = 26
+                    Function = Condition.Function.GetActorValue, ParameterOneNumber = 26
                 }
             };
 
@@ -1089,7 +1089,7 @@ namespace Engarde_Synthesis
                 ComparisonValue = 0,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetIsID,
+                    Function = Condition.Function.GetIsID,
                     ParameterOneRecord = Skyrim.Npc.Player,
                     RunOnType = Condition.RunOnType.Target
                 }
@@ -1123,7 +1123,7 @@ namespace Engarde_Synthesis
                         ComparisonValue = 1,
                         Data = new FunctionConditionData
                         {
-                            Function = ConditionData.Function.GetVMQuestVariable,
+                            Function = Condition.Function.GetVMQuestVariable,
                             ParameterOneRecord = Engarde.Quest.MCT_SneakKeyListener,
                             ParameterTwoString = "::wantsToSneak_var"
                         }
@@ -1144,7 +1144,7 @@ namespace Engarde_Synthesis
                 CompareOperator = CompareOperator.EqualTo,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.HasMagicEffect,
+                    Function = Condition.Function.HasMagicEffect,
                     ParameterOneRecord = Engarde.MagicEffect.MCT_PowerBlocking
                 }
             };
@@ -1154,7 +1154,7 @@ namespace Engarde_Synthesis
                 CompareOperator = CompareOperator.NotEqualTo,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetMovementDirection
+                    Function = Condition.Function.GetMovementDirection
                 }
             };
             Condition isNotPlayer = new ConditionFloat
@@ -1164,7 +1164,7 @@ namespace Engarde_Synthesis
                 Flags = Condition.Flag.OR,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetIsID,
+                    Function = Condition.Function.GetIsID,
                     ParameterOneRecord = Skyrim.Npc.Player
                 }
             };
@@ -1175,7 +1175,7 @@ namespace Engarde_Synthesis
                 Flags = Condition.Flag.OR,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetVMQuestVariable,
+                    Function = Condition.Function.GetVMQuestVariable,
                     ParameterOneRecord = Engarde.Quest.MCT_SneakKeyListener,
                     ParameterTwoString = "::wantsToSneak_var"
                 }
@@ -1187,7 +1187,7 @@ namespace Engarde_Synthesis
                 Flags = Condition.Flag.OR,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.IsBlocking
+                    Function = Condition.Function.IsBlocking
                 }
             };
             Condition isStaggered = new ConditionFloat
@@ -1197,7 +1197,7 @@ namespace Engarde_Synthesis
                 Flags = Condition.Flag.OR,
                 Data = new FunctionConditionData
                 {
-                    Function = ConditionData.Function.GetGraphVariableInt,
+                    Function = Condition.Function.GetGraphVariableInt,
                     ParameterOneString = "IsStaggering"
                 }
             };

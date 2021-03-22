@@ -1,18 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
-        <TargetFramework>net5.0</TargetFramework>
-    </PropertyGroup>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Mutagen.Bethesda" Version="0.27.2" />
-        <PackageReference Include="Mutagen.Bethesda.FormKeys.SkyrimSE" Version="2.0.0" />
-        <PackageReference Include="Mutagen.Bethesda.Synthesis" Version="0.17.3" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Mutagen.Bethesda" Version="0.27.2" />
+    <PackageReference Include="Mutagen.Bethesda.FormKeys.SkyrimSE" Version="2.0.0" />
+    <PackageReference Include="Mutagen.Bethesda.Synthesis" Version="0.17.3" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="FormKeys" />
-    </ItemGroup>
+  <ItemGroup>
+    <Folder Include="FormKeys" />
+  </ItemGroup>
 
 </Project>
