@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Mutagen.Bethesda.Synthesis.Settings;
+﻿using Mutagen.Bethesda.Synthesis.Settings;
 
 namespace Engarde_Synthesis.Settings
 {
