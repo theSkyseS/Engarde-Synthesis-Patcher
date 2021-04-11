@@ -615,6 +615,13 @@ namespace Engarde_Synthesis
                     case WeaponAnimationType.OneHandSword:
                         weaponCopy.ChangeWeapon(8, reachMult: 1.15f, staggerMult: 0.85f,
                             critChance: WeaponCritChance.Medium, armorPenetration: WeaponArmorPenetration.Weak);
+
+                        // The sword dragonbane is exception, it isn't weak to armor / dragonscale
+                        if (weaponCopy.EditorID!.Contains("MQ203AkaviriKatana"))
+                        {
+                            weaponCopy.Keywords!.Remove(Engarde.Keyword.MCT_WeakAgainstArmored);
+                        }
+
                         break;
                     case WeaponAnimationType.OneHandDagger:
                         weaponCopy.ChangeWeapon(3, critMult: 2, critChance: WeaponCritChance.High,
