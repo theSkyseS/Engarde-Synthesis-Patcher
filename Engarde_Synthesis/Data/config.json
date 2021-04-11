@@ -8,7 +8,8 @@
         "MCT_StaggerPower1"
       ],
       "Angular Acceleration": 0.25,
-      "Base Mass": 2
+      "Base Mass": 2,
+      "Unarmed Reach": 105,
     },
     "Actors\\AtronachFrost\\AtronachFrostProject.hkx": {
       "Keywords": [
