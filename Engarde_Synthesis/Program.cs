@@ -1068,6 +1068,7 @@ namespace Engarde_Synthesis
 
             idleCopy = CopyIdle(state, Skyrim.IdleAnimation.AttackStartDualBackHand);
             idleCopy.Conditions.Add(condition);
+            idleCopy.AnimationEvent = "AttackStartDual";
 
             idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfLeftPowerAttackRoot);
             idleCopy.Conditions[3].CompareOperator = CompareOperator.NotEqualTo;
