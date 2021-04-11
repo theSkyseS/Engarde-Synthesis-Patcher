@@ -2178,6 +2178,8 @@ namespace Engarde_Synthesis
                 Race raceCopy = state.PatchMod.Races.GetOrAddAsOverride(race);
                 bool growlEnabled =
                     state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp"));
+                bool enderalEnabled =
+                    state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Enderal - Forgotten Stories.esm"));
                 string behavior = raceCopy.BehaviorGraph.Male?.File ?? "";
                 switch (behavior)
                 {
@@ -2378,6 +2380,7 @@ namespace Engarde_Synthesis
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_StaminaControlledKW);
 
                         raceCopy.Regen[BasicStat.Stamina] = 1;
+                        raceCopy.UnarmedReach = 150; // any shorter than 127 will result in werewolf keep retreating
 
                         bool isWerebeast = false;
                         if (raceCopy.EditorID?.Contains("Werebear") ?? false)
@@ -2396,39 +2399,40 @@ namespace Engarde_Synthesis
                                 raceCopy.UnarmedDamage = 25 * _settings.Value.npcSettings.unarmedDamageMult;
                             }
 
-                            raceCopy.UnarmedReach = 145;
                             raceCopy.Starting[BasicStat.Health] = 1000;
                             raceCopy.Starting[BasicStat.Stamina] = 450;
                             isWerebeast = true;
                         }
+                        else if (enderalEnabled && !raceCopy.EditorID!.Contains("Player"))
+                        {
+                            // enderal's werewolf based mobs
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+
+                            raceCopy.BaseMass = 1.4f;
+                            raceCopy.UnarmedDamage = 10 * _settings.Value.npcSettings.unarmedDamageMult;
+                            isWerebeast = false;
+                        }
                         else if (raceCopy.EditorID!.Contains("Were"))
                         {
+                            // Skyrim werewolf and Enderal player werewolf
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist3);
                             raceCopy.ActorEffect!.Add(Engarde.Spell.MCT_BonusArmor250);
 
                             raceCopy.BaseMass = 3;
-                            if (growlEnabled)
+                            if (enderalEnabled || growlEnabled)
                             {
-                                raceCopy.UnarmedDamage = 10;
+                                // growl and enderal have their own damage scaling, don't mess with it
                             }
                             else
                             {
                                 raceCopy.UnarmedDamage = 15 * _settings.Value.npcSettings.unarmedDamageMult;
                             }
 
-                            raceCopy.UnarmedReach = 145;
                             raceCopy.Starting[BasicStat.Health] = 300;
                             raceCopy.Starting[BasicStat.Stamina] = 200;
                             isWerebeast = true;
-                        }
-                        else
-                        {
-                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
-                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
-
-                            raceCopy.BaseMass = 1.4f;
-                            raceCopy.UnarmedDamage = 8 * _settings.Value.npcSettings.unarmedDamageMult;
                         }
 
                         raceCopy.Attacks.Where(IsValidAttack).ForEach(attack =>
