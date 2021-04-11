@@ -81,7 +81,7 @@
       "Angular Acceleration": 0.25,
       "Base Mass": 3.5,
       "Unarmed Reach": 79,
-      "Unarmed Damage Multiplier": 1.5,
+      "Unarmed Damage Multiplier": 1.4,
       "Attacks": {
         "attackStart_Attack1": {
           "Attack Angle": -45

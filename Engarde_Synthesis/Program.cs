@@ -629,17 +629,17 @@ namespace Engarde_Synthesis
                     case WeaponAnimationType.TwoHandSword:
                     case WeaponAnimationType.TwoHandAxe
                         when weaponCopy.HasKeyword(Skyrim.Keyword.WeapTypeGreatsword):
-                        weaponCopy.ChangeWeapon(14, 0.9f, 1.15f, staggerMult: 1.35f, critChance: WeaponCritChance.Low,
+                        weaponCopy.ChangeWeapon(14, 0.8f, 1.15f, staggerMult: 1.35f, critChance: WeaponCritChance.Low,
                             armorPenetration: WeaponArmorPenetration.Weak);
                         break;
                     case WeaponAnimationType.TwoHandAxe
                         when weaponCopy.HasKeyword(Skyrim.Keyword.WeapTypeWarhammer):
-                        weaponCopy.ChangeWeapon(18, 0.9f, speedMult: 0.9f, critMult: 0.5f, staggerMult: 1.65f,
+                        weaponCopy.ChangeWeapon(18, 0.8f, speedMult: 0.9f, critMult: 0.5f, staggerMult: 1.65f,
                             armorPenetration: WeaponArmorPenetration.Strong);
                         break;
                     case WeaponAnimationType.TwoHandAxe:
                     {
-                        weaponCopy.ChangeWeapon(16, reachMult: 0.8f, speedMult: 1.1f, staggerMult: 1.5f,
+                        weaponCopy.ChangeWeapon(16, 0.9f, reachMult: 0.8f, speedMult: 1.1f, staggerMult: 1.5f,
                             armorPenetration: WeaponArmorPenetration.Strong);
                         break;
                     }
