@@ -2194,6 +2194,7 @@ namespace Engarde_Synthesis
                         break;
                     }
                     case "Actors\\Draugr\\DraugrProject.hkx":
+                    case "Actors\\Draugr\\DraugrSkeletonProject.hkx":
                         if (raceCopy.EditorID!.Contains("Skeleton"))
                         {
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_ArmoredKW);

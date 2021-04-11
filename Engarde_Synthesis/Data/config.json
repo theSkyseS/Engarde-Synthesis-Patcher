@@ -168,6 +168,15 @@
       "Unarmed Reach": 77,
       "Add NPC Spell": true
     },
+    "Actors\\Draugr\\DraugrSkeletonProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1"
+      ],
+      "Angular Acceleration": 0.12,
+      "Base Mass": 2,
+      "Unarmed Reach": 77,
+      "Add NPC Spell": true
+    },
     "Actors\\DLC02\\DwarvenBallistaCenturion\\BallistaCenturion.hkx": {
       "Keywords": [
         "MCT_StaggerResist1",
