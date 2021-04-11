@@ -2413,7 +2413,7 @@ namespace Engarde_Synthesis
                             raceCopy.UnarmedDamage = 10 * _settings.Value.npcSettings.unarmedDamageMult;
                             isWerebeast = false;
                         }
-                        else if (raceCopy.EditorID!.Contains("Were"))
+                        else
                         {
                             // Skyrim werewolf and Enderal player werewolf
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
