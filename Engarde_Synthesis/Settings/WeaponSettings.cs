@@ -13,5 +13,7 @@ namespace Engarde_Synthesis.Settings
         public float weaponDamageMult { get; set; } = 2f;
         [SynthesisSettingName("Weapon critical damage multiplier")]
         public float weaponCritDamageMult { get; set; } = 1f;
+        [SynthesisSettingName("Bladed weapons are weak to armored foes")]
+        public bool weakToArmor { get; set; } = true;
     }
 }

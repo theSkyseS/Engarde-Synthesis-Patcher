@@ -570,6 +570,8 @@ namespace Engarde_Synthesis
                 state.LoadOrder.TryGetIfEnabled(ModKey.FromNameAndExtension("DSerCombatGameplayOverhaul.esp"), out _)
                     ? 1
                     : 0);
+            ChangeGlobalShortValue(state, Engarde.Global.MCT_WeakToArmorEnabled,
+                _settings.Value.weaponSettings.weakToArmor ? 1 : 0);
         }
 
         private static void PatchWeapons(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1465,12 +1467,36 @@ namespace Engarde_Synthesis
                 spell.Effects[0].Data!.Duration = duration;
             }
 
-
             var spellCopy = CopySpell(state, Engarde.Spell.MCT_PowerAttackCoolDownSpell);
             spellCopy.Effects[0].Data!.Duration = _settings.Value.powerAttacks.powerAttackCooldown;
 
             spellCopy = CopySpell(state, Engarde.Spell.MCT_NoStaminaRegenWhileRunning);
             spellCopy.Effects[0].Data!.Magnitude = _settings.Value.staminaSettings.runningStaminaRatePenalty;
+
+            spellCopy = CopySpell(state, Engarde.Spell.MCT_NormalAttackSpell);
+            if (_settings.Value.weaponSettings.weakToArmor)
+            {
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_HitRepelledRight,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 0
+                    }
+                });
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_HitRepelledLeft,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 0
+                    }
+                });
+            }
 
             spellCopy = CopySpell(state, Engarde.Spell.MCT_MeleeActorMonitorSpell);
             if (_settings.Value.npcSettings.staminaManagement)

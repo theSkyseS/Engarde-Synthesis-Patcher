@@ -31,6 +31,7 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
             public static FormLink<IGlobalGetter> MCT_PowerAttackCoolDownTime => Construct(0x2659c0);
             public static FormLink<IGlobalGetter> MCT_DefensiveActionEnabled => Construct(0x29924c);
             public static FormLink<IGlobalGetter> MCT_ModActivated => Construct(0x2997af);
+            public static FormLink<IGlobalGetter> MCT_WeakToArmorEnabled => Construct(0x2a23c8);
         }
     }
 }
