@@ -1497,6 +1497,84 @@ namespace Engarde_Synthesis
                     }
                 });
             }
+            if (_settings.Value.weaponSettings.bluntKnocksDown)
+            {
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_DamageStaminaByWeapon,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 0
+                    }
+                });
+            }
+
+            spellCopy = CopySpell(state, Engarde.Spell.MCT_PowerAttackSpell);
+            if (_settings.Value.weaponSettings.bluntKnocksDown)
+            {
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_DamageStaminaByWeapon,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 0
+                    }
+                });
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_KnockdownByWeapon,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 0
+                    }
+                });
+            }
+
+            spellCopy = CopySpell(state, Engarde.Spell.MCT_SidePowerAttackSpell);
+            if (_settings.Value.weaponSettings.bluntKnocksDown)
+            {
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_DamageStaminaByWeapon,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 0
+                    }
+                });
+            }
+
+            spellCopy = CopySpell(state, Engarde.Spell.MCT_BackPowerAttackSpell);
+            if (_settings.Value.weaponSettings.bluntKnocksDown)
+            {
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_DamageStaminaByWeapon,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 0
+                    }
+                });
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_KnockdownByWeapon,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 0
+                    }
+                });
+            }
 
             spellCopy = CopySpell(state, Engarde.Spell.MCT_MeleeActorMonitorSpell);
             if (_settings.Value.npcSettings.staminaManagement)
