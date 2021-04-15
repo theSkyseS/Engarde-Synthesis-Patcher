@@ -572,6 +572,8 @@ namespace Engarde_Synthesis
                     : 0);
             ChangeGlobalShortValue(state, Engarde.Global.MCT_WeakToArmorEnabled,
                 _settings.Value.weaponSettings.weakToArmor ? 1 : 0);
+            ChangeGlobalShortValue(state, Engarde.Global.MCT_SpellSwordBlockingEnabled,
+                _settings.Value.basicAttacks.spellSwordBlocking ? 1 : 0);
         }
 
         private static void PatchWeapons(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -918,6 +920,68 @@ namespace Engarde_Synthesis
             {
                 IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.BlockingStart);
                 idleCopy.RelatedIdles[1] = originalLeftHandAttackSibling;
+            }
+
+            if (_settings.Value.basicAttacks.basicAttackTweaks && _settings.Value.basicAttacks.spellSwordBlocking)
+            {
+                // StopBlocking idle works for both when  
+                IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.StopBlocking);
+                idleCopy.Conditions[0].Flags = Condition.Flag.OR; // wantBlocking
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    // or isBlocking
+                    CompareOperator = CompareOperator.EqualTo,
+                    ComparisonValue = 1,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.IsBlocking
+                    }
+                });
+
+                // AttackMagicLeftRoot idle only works when
+                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.AttackMagicLeftRoot);
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    // modifier key (walk) is down
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 1,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetVMQuestVariable,
+                        ParameterOneRecord = Engarde.Quest.MCT_WalkKeyListener,
+                        ParameterTwoString = "::keyDown_var"
+                    }
+                });
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    // or don't have anything equipped on right hand
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 0,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetEquippedItemType,
+                        ParameterOneNumber = 1
+                    }
+                });
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    // or don't have melee weapons equipped on right hand
+                    CompareOperator = CompareOperator.GreaterThan,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 6,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetEquippedItemType,
+                        ParameterOneNumber = 1
+                    }
+                });
+
+                // MCTSpellSwordBlockingStart idle put it after BlockingStart
+                idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTSpellSwordBlockingStart);
+                idleCopy.RelatedIdles[0] = Update.IdleAnimation.NonMountedCombatLeft;
+                idleCopy.RelatedIdles[1] = Skyrim.IdleAnimation.BlockingStart;
             }
         }
 
