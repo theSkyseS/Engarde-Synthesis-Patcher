@@ -1117,6 +1117,7 @@ namespace Engarde_Synthesis
             {
                 return;
             }
+
             foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.IdleAnimation().WinningOverrides()
                 .Where(idle => idle.EditorID != "MCTDefensiveMoves" && idle.EditorID != "BlockHit" &&
                                idle.EditorID != "SneakStart" && idle.EditorID != "SneakStop"))
@@ -1801,8 +1802,22 @@ namespace Engarde_Synthesis
 
                     if (!containsGrowl)
                     {
-                        spellCopy.Effects[1].Data!.Magnitude = 300;
-                        spellCopy.Effects[2].Data!.Magnitude = 200;
+                        var effect = spellCopy.Effects.Find(x =>
+                            x.BaseEffect.FormKey == Skyrim.MagicEffect.AbFortifyStamina.FormKey &&
+                            x.Conditions.Count == 0);
+                        if (effect != null)
+                        {
+                            effect.Data!.Magnitude = 300;
+                        }
+
+                        effect = spellCopy.Effects.Find(x =>
+                            x.BaseEffect.FormKey == Skyrim.MagicEffect.AbFortifyHealth.FormKey &&
+                            x.Conditions.Count == 0);
+                            
+                        if (effect != null)
+                        {
+                            effect.Data!.Magnitude = 200;
+                        }
                     }
 
                     spellCopy.Effects.Add(new Effect
@@ -1819,9 +1834,21 @@ namespace Engarde_Synthesis
                     if (containsGrowl)
                     {
                         spellCopy = CopySpell(state, Dragonborn.Spell.DLC2AbWerebear);
+                        var effect = spellCopy.Effects.Find(x =>
+                            x.BaseEffect.FormKey == Skyrim.MagicEffect.AbFortifyStamina.FormKey &&
+                            x.Conditions.Count == 0);
+                        if (effect != null)
+                        {
+                            effect.Data!.Magnitude = 300;
+                        }
 
-                        spellCopy.Effects[3].Data!.Magnitude = 300;
-                        spellCopy.Effects[4].Data!.Magnitude = 400;
+                        effect = spellCopy.Effects.Find(x =>
+                            x.BaseEffect.FormKey == Skyrim.MagicEffect.AbFortifyHealth.FormKey &&
+                            x.Conditions.Count == 0);
+                        if (effect != null)
+                        {
+                            effect.Data!.Magnitude = 400;
+                        }
 
                         spellCopy.Effects.Add(new Effect
                         {
