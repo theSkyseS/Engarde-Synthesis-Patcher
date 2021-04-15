@@ -1000,11 +1000,10 @@ namespace Engarde_Synthesis
 
             if (_settings.Value.powerAttacks.powerAttackTweaks)
             {
-                List<IIdleAnimation> idlesToDisable = new()
+                List<IIdleAnimation> idlesToDisable = new ()
                 {
                     CopyIdle(state, Skyrim.IdleAnimation.DualWieldPowerAttackRoot),
                     CopyIdle(state, Skyrim.IdleAnimation.DualWieldSpecialPowerAttack),
-                    CopyIdle(state, Skyrim.IdleAnimation.DefaultSheathe),
                     CopyIdle(state, Skyrim.IdleAnimation.AttackRightPower2HMForwardSprinting),
                     CopyIdle(state, Skyrim.IdleAnimation.AttackRightPower2HWForwardSprinting),
                     CopyIdle(state, Skyrim.IdleAnimation.AttackRightPowerForwardSprinting),
@@ -1021,6 +1020,47 @@ namespace Engarde_Synthesis
 
                 idleCopy = CopyIdle(state, Skyrim.IdleAnimation.PowerAttack);
                 idleCopy.Conditions[0] = disableCondition;
+
+                // sheathe can be triggered from script too
+                ConditionFloat wantsToSheathe = new ()
+                {
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 1,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetVMQuestVariable,
+                        ParameterOneRecord = Engarde.Quest.MCT_SheathKeyListener,
+                        ParameterTwoString = "::wantsToSheathe_var"
+                    }
+                };
+
+                // default sheathe can be executed by NPC or by script
+                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.DefaultSheathe);
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 0,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetIsID,
+                        ParameterOneRecord = Skyrim.Npc.Player,
+                    }
+                });
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 1,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetVMQuestVariable,
+                        ParameterOneRecord = Engarde.Quest.MCT_SheathKeyListener,
+                        ParameterTwoString = "::wantsToSheathe_var"
+                    }
+                });
             }
         }
 
