@@ -828,7 +828,6 @@ namespace Engarde_Synthesis
             if (_settings.Value.basicAttacks.basicAttackTweaks)
             {
                 var idleCopy = CopyIdle(state, Skyrim.IdleAnimation.NormalAttack);
-                idleCopy.Conditions[1].Flags ^= Condition.Flag.OR;
                 idleCopy.Conditions.Add(staminaCondition);
                 if (_settings.Value.basicAttacks.dwAttackTweaks)
                 {
