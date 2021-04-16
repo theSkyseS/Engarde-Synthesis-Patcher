@@ -1048,18 +1048,7 @@ namespace Engarde_Synthesis
                         ParameterOneRecord = Skyrim.Npc.Player,
                     }
                 });
-                idleCopy.Conditions.Add(new ConditionFloat
-                {
-                    CompareOperator = CompareOperator.EqualTo,
-                    Flags = Condition.Flag.OR,
-                    ComparisonValue = 1,
-                    Data = new FunctionConditionData
-                    {
-                        Function = Condition.Function.GetVMQuestVariable,
-                        ParameterOneRecord = Engarde.Quest.MCT_SheathKeyListener,
-                        ParameterTwoString = "::wantsToSheathe_var"
-                    }
-                });
+                idleCopy.Conditions.Add(wantsToSheathe);
             }
         }
 
@@ -1570,16 +1559,37 @@ namespace Engarde_Synthesis
                 spell.Effects[0].Data!.Magnitude = magnitude;
                 spell.Effects[0].Data!.Duration = duration;
             }
+            
+            Effect damageStamina = new()
+            {
+                BaseEffect = Engarde.MagicEffect.MCT_DamageStaminaByWeapon,
+                Data = new EffectData
+                {
+                    Magnitude = 0,
+                    Area = 0,
+                    Duration = 0
+                }
+            };
+            Effect knockdownByWeapon = new()
+            {
+                BaseEffect = Engarde.MagicEffect.MCT_KnockdownByWeapon,
+                Data = new EffectData
+                {
+                    Magnitude = 0,
+                    Area = 0,
+                    Duration = 0
+                }
+            };
 
             var spellCopy = CopySpell(state, Engarde.Spell.MCT_PowerAttackCoolDownSpell);
             spellCopy.Effects[0].Data!.Duration = _settings.Value.powerAttacks.powerAttackCooldown;
 
             spellCopy = CopySpell(state, Engarde.Spell.MCT_NoStaminaRegenWhileRunning);
             spellCopy.Effects[0].Data!.Magnitude = _settings.Value.staminaSettings.runningStaminaRatePenalty;
-
-            spellCopy = CopySpell(state, Engarde.Spell.MCT_NormalAttackSpell);
+            
             if (_settings.Value.weaponSettings.weakToArmor)
             {
+                spellCopy = CopySpell(state, Engarde.Spell.MCT_NormalAttackSpell);
                 spellCopy.Effects.Add(new Effect
                 {
                     BaseEffect = Engarde.MagicEffect.MCT_HitRepelledRight,
@@ -1601,83 +1611,31 @@ namespace Engarde_Synthesis
                     }
                 });
             }
+
             if (_settings.Value.weaponSettings.bluntKnocksDown)
             {
-                spellCopy.Effects.Add(new Effect
-                {
-                    BaseEffect = Engarde.MagicEffect.MCT_DamageStaminaByWeapon,
-                    Data = new EffectData
-                    {
-                        Magnitude = 0,
-                        Area = 0,
-                        Duration = 0
-                    }
-                });
+                spellCopy = CopySpell(state, Engarde.Spell.MCT_NormalAttackSpell);
+                spellCopy.Effects.Add(damageStamina);
             }
 
-            spellCopy = CopySpell(state, Engarde.Spell.MCT_PowerAttackSpell);
             if (_settings.Value.weaponSettings.bluntKnocksDown)
             {
-                spellCopy.Effects.Add(new Effect
-                {
-                    BaseEffect = Engarde.MagicEffect.MCT_DamageStaminaByWeapon,
-                    Data = new EffectData
-                    {
-                        Magnitude = 0,
-                        Area = 0,
-                        Duration = 0
-                    }
-                });
-                spellCopy.Effects.Add(new Effect
-                {
-                    BaseEffect = Engarde.MagicEffect.MCT_KnockdownByWeapon,
-                    Data = new EffectData
-                    {
-                        Magnitude = 0,
-                        Area = 0,
-                        Duration = 0
-                    }
-                });
+                spellCopy = CopySpell(state, Engarde.Spell.MCT_PowerAttackSpell);
+                spellCopy.Effects.Add(damageStamina);
+                spellCopy.Effects.Add(knockdownByWeapon);
             }
 
-            spellCopy = CopySpell(state, Engarde.Spell.MCT_SidePowerAttackSpell);
             if (_settings.Value.weaponSettings.bluntKnocksDown)
             {
-                spellCopy.Effects.Add(new Effect
-                {
-                    BaseEffect = Engarde.MagicEffect.MCT_DamageStaminaByWeapon,
-                    Data = new EffectData
-                    {
-                        Magnitude = 0,
-                        Area = 0,
-                        Duration = 0
-                    }
-                });
+                spellCopy = CopySpell(state, Engarde.Spell.MCT_SidePowerAttackSpell);
+                spellCopy.Effects.Add(damageStamina);
             }
 
-            spellCopy = CopySpell(state, Engarde.Spell.MCT_BackPowerAttackSpell);
             if (_settings.Value.weaponSettings.bluntKnocksDown)
             {
-                spellCopy.Effects.Add(new Effect
-                {
-                    BaseEffect = Engarde.MagicEffect.MCT_DamageStaminaByWeapon,
-                    Data = new EffectData
-                    {
-                        Magnitude = 0,
-                        Area = 0,
-                        Duration = 0
-                    }
-                });
-                spellCopy.Effects.Add(new Effect
-                {
-                    BaseEffect = Engarde.MagicEffect.MCT_KnockdownByWeapon,
-                    Data = new EffectData
-                    {
-                        Magnitude = 0,
-                        Area = 0,
-                        Duration = 0
-                    }
-                });
+                spellCopy = CopySpell(state, Engarde.Spell.MCT_BackPowerAttackSpell);
+                spellCopy.Effects.Add(damageStamina);
+                spellCopy.Effects.Add(knockdownByWeapon);
             }
 
             spellCopy = CopySpell(state, Engarde.Spell.MCT_MeleeActorMonitorSpell);
@@ -2590,7 +2548,7 @@ namespace Engarde_Synthesis
                         raceCopy.Regen[BasicStat.Stamina] = 1;
                         raceCopy.UnarmedReach = 150; // any shorter than 127 will result in werewolf keep retreating
 
-                        bool isWerebeast = false;
+                        bool isWerebeast;
                         if (raceCopy.EditorID?.Contains("Werebear") ?? false)
                         {
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
@@ -2629,11 +2587,8 @@ namespace Engarde_Synthesis
                             raceCopy.ActorEffect!.Add(Engarde.Spell.MCT_BonusArmor250);
 
                             raceCopy.BaseMass = 3;
-                            if (enderalEnabled || growlEnabled)
-                            {
-                                // growl and enderal have their own damage scaling, don't mess with it
-                            }
-                            else
+                            // growl and enderal have their own damage scaling, don't mess with it
+                            if (!enderalEnabled && !growlEnabled)
                             {
                                 raceCopy.UnarmedDamage = 15 * _settings.Value.npcSettings.unarmedDamageMult;
                             }
@@ -2685,7 +2640,6 @@ namespace Engarde_Synthesis
                 PatchWeaponSpeedEffects(state, weaponSpeedEffects, leftWeaponSpeedEffects);
                 PatchWeaponSpeedSpell(state, weaponSpeedEffects, leftWeaponSpeedEffects);
             }
-
             PatchProjectiles(state);
             PatchMovement(state);
         }
