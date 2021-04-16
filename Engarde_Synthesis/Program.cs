@@ -1154,7 +1154,8 @@ namespace Engarde_Synthesis
         private static void PatchWerewolves(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             if (!_settings.Value.npcSettings.werewolfTweaks || !_settings.Value.powerAttacks.powerAttackTweaks ||
-                state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Brevi_MoonlightTales.esp")))
+                state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Brevi_MoonlightTales.esp")) ||
+                state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Moonlight Tales Special Edition.esp")))
             {
                 return;
             }
