@@ -28,6 +28,8 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
             public static FormLink<IQuestGetter> MCT_SneakKeyListener => Construct(0x27d2e9);
             public static FormLink<IQuestGetter> MCT_PowerBlockKeyListener => Construct(0x27ede1);
             public static FormLink<IQuestGetter> MCT_CGOIntegration => Construct(0x28a51a);
+            public static FormLink<IQuestGetter> MCT_RightWeaponBlockController => Construct(0x29a274);
+            public static FormLink<IQuestGetter> MCT_WalkKeyListener => Construct(0x29c82a);
         }
     }
 }

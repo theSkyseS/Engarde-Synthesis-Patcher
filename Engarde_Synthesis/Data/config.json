@@ -8,7 +8,8 @@
         "MCT_StaggerPower1"
       ],
       "Angular Acceleration": 0.25,
-      "Base Mass": 2
+      "Base Mass": 2,
+      "Unarmed Reach": 105,
     },
     "Actors\\AtronachFrost\\AtronachFrostProject.hkx": {
       "Keywords": [
@@ -80,7 +81,7 @@
       "Angular Acceleration": 0.25,
       "Base Mass": 3.5,
       "Unarmed Reach": 79,
-      "Unarmed Damage Multiplier": 1.5,
+      "Unarmed Damage Multiplier": 1.4,
       "Attacks": {
         "attackStart_Attack1": {
           "Attack Angle": -45
@@ -159,6 +160,15 @@
       "Angular Acceleration": 0.25
     },
     "Actors\\Draugr\\DraugrProject.hkx": {
+      "Keywords": [
+        "MCT_StaggerResist1"
+      ],
+      "Angular Acceleration": 0.12,
+      "Base Mass": 2,
+      "Unarmed Reach": 77,
+      "Add NPC Spell": true
+    },
+    "Actors\\Draugr\\DraugrSkeletonProject.hkx": {
       "Keywords": [
         "MCT_StaggerResist1"
       ],

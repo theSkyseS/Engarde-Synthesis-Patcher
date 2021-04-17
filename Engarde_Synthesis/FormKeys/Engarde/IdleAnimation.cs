@@ -73,6 +73,7 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
             public static FormLink<IIdleAnimationGetter> MCTPowerAttackH2HRoot => Construct(0x298782);
             public static FormLink<IIdleAnimationGetter> MCTPowerAttackH2HRight => Construct(0x298783);
             public static FormLink<IIdleAnimationGetter> MCTPowerAttackH2HLeft => Construct(0x298784);
+            public static FormLink<IIdleAnimationGetter> MCTSpellSwordBlockingStart => Construct(0x29c829);
         }
     }
 }

@@ -10,5 +10,7 @@ namespace Engarde_Synthesis.Settings
         public bool dwAttackTweaks = true;
         [SynthesisSettingName("Include Unarmed tweaks")]
         public bool h2HAttackTweaks = true;
+        [SynthesisSettingName("Spellsword can block")]
+        public bool spellSwordBlocking = true;
     }
 }
