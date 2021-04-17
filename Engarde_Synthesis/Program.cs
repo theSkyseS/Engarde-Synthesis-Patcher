@@ -13,6 +13,9 @@ using Noggog;
 
 namespace Engarde_Synthesis
 {
+    /**
+     * Engarde Synthesis patcher, for Engarde v4.1
+     */
     public static class Program
     {
         #region Statics
