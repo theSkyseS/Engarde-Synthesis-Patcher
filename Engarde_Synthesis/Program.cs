@@ -828,10 +828,23 @@ namespace Engarde_Synthesis
                     ParameterTwoString = "::isStaggeringAttack_var"
                 }
             };
+            ConditionFloat incorporealCheckCondition = new()
+            {
+                CompareOperator = CompareOperator.NotEqualTo,
+                ComparisonValue = 1,
+                Data = new FunctionConditionData
+                {
+                    Function = Condition.Function.GetVMQuestVariable,
+                    ParameterOneRecord = Engarde.Quest.MCT_StatChecker,
+                    ParameterTwoString = "::incorporeal_var"
+                }
+            };
             if (_settings.Value.basicAttacks.basicAttackTweaks)
             {
                 var idleCopy = CopyIdle(state, Skyrim.IdleAnimation.NormalAttack);
+                idleCopy.Conditions.Last().Flags.SetFlag(Condition.Flag.OR, false);
                 idleCopy.Conditions.Add(staminaCondition);
+                idleCopy.Conditions.Add(incorporealCheckCondition);
                 if (_settings.Value.basicAttacks.dwAttackTweaks)
                 {
                     originalNormalAttackSibling.SetTo(idleCopy.RelatedIdles[1]);
@@ -883,6 +896,7 @@ namespace Engarde_Synthesis
                 idleCopy.RelatedIdles[1] = originalNormalAttackSibling;
                 idleCopy.Conditions.Add(lastAttackIsRightCondition);
                 idleCopy.Conditions.Add(staminaCondition);
+                idleCopy.Conditions.Add(incorporealCheckCondition);
             }
 
             if (_settings.Value.basicAttacks.basicAttackTweaks && _settings.Value.basicAttacks.h2HAttackTweaks)
@@ -951,7 +965,7 @@ namespace Engarde_Synthesis
                     Data = new FunctionConditionData
                     {
                         Function = Condition.Function.GetVMQuestVariable,
-                        ParameterOneRecord = Engarde.Quest.MCT_WalkKeyListener,
+                        ParameterOneRecord = Engarde.Quest.MCT_ModifierKeyListener,
                         ParameterTwoString = "::keyDown_var"
                     }
                 });
@@ -971,7 +985,6 @@ namespace Engarde_Synthesis
                 {
                     // or don't have melee weapons equipped on right hand
                     CompareOperator = CompareOperator.GreaterThan,
-                    Flags = Condition.Flag.OR,
                     ComparisonValue = 6,
                     Data = new FunctionConditionData
                     {
