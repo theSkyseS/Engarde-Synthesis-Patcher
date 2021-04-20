@@ -965,7 +965,7 @@ namespace Engarde_Synthesis
                     Data = new FunctionConditionData
                     {
                         Function = Condition.Function.GetVMQuestVariable,
-                        ParameterOneRecord = Engarde.Quest.MCT_WalkKeyListener,
+                        ParameterOneRecord = Engarde.Quest.MCT_ModifierKeyListener,
                         ParameterTwoString = "::keyDown_var"
                     }
                 });
@@ -985,7 +985,6 @@ namespace Engarde_Synthesis
                 {
                     // or don't have melee weapons equipped on right hand
                     CompareOperator = CompareOperator.GreaterThan,
-                    Flags = Condition.Flag.OR,
                     ComparisonValue = 6,
                     Data = new FunctionConditionData
                     {
