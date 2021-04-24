@@ -51,7 +51,7 @@ namespace Engarde_Synthesis
                 {
                     if (state.LoadOrder.HasMod(ModKey.FromNameAndExtension("MCTPatch.esp"), true))
                     {
-                        throw new Exception("You have MCTPatch.esp enabled.\n Disable it and then run Synthesis");
+                        throw new Exception("You have MCTPatch.esp enabled. Disable it and then run Synthesis");
                     }
                 })
                 .SetTypicalOpen(GameRelease.SkyrimSE, new ModKey("MCTPatch.esp", ModType.Plugin))
