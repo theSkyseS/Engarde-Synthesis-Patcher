@@ -13,6 +13,9 @@ using Noggog;
 
 namespace Engarde_Synthesis
 {
+    /**
+     * Engarde Synthesis patcher, for Engarde v4.1
+     */
     public static class Program
     {
         #region Statics
@@ -577,6 +580,10 @@ namespace Engarde_Synthesis
                 state.LoadOrder.TryGetIfEnabled(ModKey.FromNameAndExtension("DSerCombatGameplayOverhaul.esp"), out _)
                     ? 1
                     : 0);
+            ChangeGlobalShortValue(state, Engarde.Global.MCT_WeakToArmorEnabled,
+                _settings.Value.weaponSettings.weakToArmor ? 1 : 0);
+            ChangeGlobalShortValue(state, Engarde.Global.MCT_SpellSwordBlockingEnabled,
+                _settings.Value.basicAttacks.spellSwordBlocking ? 1 : 0);
         }
 
         private static void PatchWeapons(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -622,6 +629,13 @@ namespace Engarde_Synthesis
                     case WeaponAnimationType.OneHandSword:
                         weaponCopy.ChangeWeapon(8, reachMult: 1.15f, staggerMult: 0.85f,
                             critChance: WeaponCritChance.Medium, armorPenetration: WeaponArmorPenetration.Weak);
+
+                        // The sword dragonbane is exception, it isn't weak to armor / dragonscale
+                        if (weaponCopy.EditorID!.Contains("MQ203AkaviriKatana"))
+                        {
+                            weaponCopy.Keywords!.Remove(Engarde.Keyword.MCT_WeakAgainstArmored);
+                        }
+
                         break;
                     case WeaponAnimationType.OneHandDagger:
                         weaponCopy.ChangeWeapon(3, critMult: 2, critChance: WeaponCritChance.High,
@@ -636,17 +650,17 @@ namespace Engarde_Synthesis
                     case WeaponAnimationType.TwoHandSword:
                     case WeaponAnimationType.TwoHandAxe
                         when weaponCopy.HasKeyword(Skyrim.Keyword.WeapTypeGreatsword):
-                        weaponCopy.ChangeWeapon(14, 0.9f, 1.15f, staggerMult: 1.35f, critChance: WeaponCritChance.Low,
+                        weaponCopy.ChangeWeapon(14, 0.8f, 1.15f, staggerMult: 1.35f, critChance: WeaponCritChance.Low,
                             armorPenetration: WeaponArmorPenetration.Weak);
                         break;
                     case WeaponAnimationType.TwoHandAxe
                         when weaponCopy.HasKeyword(Skyrim.Keyword.WeapTypeWarhammer):
-                        weaponCopy.ChangeWeapon(18, 0.9f, speedMult: 0.9f, critMult: 0.5f, staggerMult: 1.65f,
+                        weaponCopy.ChangeWeapon(18, 0.8f, speedMult: 0.9f, critMult: 0.5f, staggerMult: 1.65f,
                             armorPenetration: WeaponArmorPenetration.Strong);
                         break;
                     case WeaponAnimationType.TwoHandAxe:
                     {
-                        weaponCopy.ChangeWeapon(16, reachMult: 0.8f, speedMult: 1.1f, staggerMult: 1.5f,
+                        weaponCopy.ChangeWeapon(16, 0.9f, reachMult: 0.8f, speedMult: 1.1f, staggerMult: 1.5f,
                             armorPenetration: WeaponArmorPenetration.Strong);
                         break;
                     }
@@ -821,11 +835,23 @@ namespace Engarde_Synthesis
                     ParameterTwoString = "::isStaggeringAttack_var"
                 }
             };
+            ConditionFloat incorporealCheckCondition = new()
+            {
+                CompareOperator = CompareOperator.NotEqualTo,
+                ComparisonValue = 1,
+                Data = new FunctionConditionData
+                {
+                    Function = Condition.Function.GetVMQuestVariable,
+                    ParameterOneRecord = Engarde.Quest.MCT_StatChecker,
+                    ParameterTwoString = "::incorporeal_var"
+                }
+            };
             if (_settings.Value.basicAttacks.basicAttackTweaks)
             {
                 var idleCopy = CopyIdle(state, Skyrim.IdleAnimation.NormalAttack);
-                idleCopy.Conditions[1].Flags ^= Condition.Flag.OR;
+                idleCopy.Conditions.Last().Flags.SetFlag(Condition.Flag.OR, false);
                 idleCopy.Conditions.Add(staminaCondition);
+                idleCopy.Conditions.Add(incorporealCheckCondition);
                 if (_settings.Value.basicAttacks.dwAttackTweaks)
                 {
                     originalNormalAttackSibling.SetTo(idleCopy.RelatedIdles[1]);
@@ -877,6 +903,7 @@ namespace Engarde_Synthesis
                 idleCopy.RelatedIdles[1] = originalNormalAttackSibling;
                 idleCopy.Conditions.Add(lastAttackIsRightCondition);
                 idleCopy.Conditions.Add(staminaCondition);
+                idleCopy.Conditions.Add(incorporealCheckCondition);
             }
 
             if (_settings.Value.basicAttacks.basicAttackTweaks && _settings.Value.basicAttacks.h2HAttackTweaks)
@@ -917,6 +944,67 @@ namespace Engarde_Synthesis
                 IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.BlockingStart);
                 idleCopy.RelatedIdles[1] = originalLeftHandAttackSibling;
             }
+
+            if (_settings.Value.basicAttacks.basicAttackTweaks && _settings.Value.basicAttacks.spellSwordBlocking)
+            {
+                // StopBlocking idle works for both when  
+                IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.StopBlocking);
+                idleCopy.Conditions[0].Flags = Condition.Flag.OR; // wantBlocking
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    // or isBlocking
+                    CompareOperator = CompareOperator.EqualTo,
+                    ComparisonValue = 1,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.IsBlocking
+                    }
+                });
+
+                // AttackMagicLeftRoot idle only works when
+                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.AttackMagicLeftRoot);
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    // modifier key (walk) is down
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 1,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetVMQuestVariable,
+                        ParameterOneRecord = Engarde.Quest.MCT_ModifierKeyListener,
+                        ParameterTwoString = "::keyDown_var"
+                    }
+                });
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    // or don't have anything equipped on right hand
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 0,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetEquippedItemType,
+                        ParameterOneNumber = 1
+                    }
+                });
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    // or don't have melee weapons equipped on right hand
+                    CompareOperator = CompareOperator.GreaterThan,
+                    ComparisonValue = 6,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetEquippedItemType,
+                        ParameterOneNumber = 1
+                    }
+                });
+
+                // MCTSpellSwordBlockingStart idle put it after BlockingStart
+                idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTSpellSwordBlockingStart);
+                idleCopy.RelatedIdles[0] = Update.IdleAnimation.NonMountedCombatLeft;
+                idleCopy.RelatedIdles[1] = Skyrim.IdleAnimation.BlockingStart;
+            }
         }
 
         private static void PatchPowerAttacks(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -934,11 +1022,10 @@ namespace Engarde_Synthesis
 
             if (_settings.Value.powerAttacks.powerAttackTweaks)
             {
-                List<IIdleAnimation> idlesToDisable = new()
+                List<IIdleAnimation> idlesToDisable = new ()
                 {
                     CopyIdle(state, Skyrim.IdleAnimation.DualWieldPowerAttackRoot),
                     CopyIdle(state, Skyrim.IdleAnimation.DualWieldSpecialPowerAttack),
-                    CopyIdle(state, Skyrim.IdleAnimation.DefaultSheathe),
                     CopyIdle(state, Skyrim.IdleAnimation.AttackRightPower2HMForwardSprinting),
                     CopyIdle(state, Skyrim.IdleAnimation.AttackRightPower2HWForwardSprinting),
                     CopyIdle(state, Skyrim.IdleAnimation.AttackRightPowerForwardSprinting),
@@ -955,6 +1042,36 @@ namespace Engarde_Synthesis
 
                 idleCopy = CopyIdle(state, Skyrim.IdleAnimation.PowerAttack);
                 idleCopy.Conditions[0] = disableCondition;
+
+                // sheathe can be triggered from script too
+                ConditionFloat wantsToSheathe = new ()
+                {
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 1,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetVMQuestVariable,
+                        ParameterOneRecord = Engarde.Quest.MCT_SheathKeyListener,
+                        ParameterTwoString = "::wantsToSheathe_var"
+                    }
+                };
+
+                // default sheathe can be executed by NPC or by script
+                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.DefaultSheathe);
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
+                    
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 0,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetIsID,
+                        ParameterOneRecord = Skyrim.Npc.Player,
+                    }
+                });
+                idleCopy.Conditions.Add(wantsToSheathe);
             }
         }
 
@@ -1049,7 +1166,8 @@ namespace Engarde_Synthesis
         private static void PatchWerewolves(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             if (!_settings.Value.npcSettings.werewolfTweaks || !_settings.Value.powerAttacks.powerAttackTweaks ||
-                state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Brevi_MoonlightTales.esp")))
+                state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Brevi_MoonlightTales.esp")) ||
+                state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Moonlight Tales Special Edition.esp")))
             {
                 return;
             }
@@ -1075,6 +1193,7 @@ namespace Engarde_Synthesis
 
             idleCopy = CopyIdle(state, Skyrim.IdleAnimation.AttackStartDualBackHand);
             idleCopy.Conditions.Add(condition);
+            idleCopy.AnimationEvent = "AttackStartDual";
 
             idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfLeftPowerAttackRoot);
             idleCopy.Conditions[3].CompareOperator = CompareOperator.NotEqualTo;
@@ -1464,13 +1583,84 @@ namespace Engarde_Synthesis
                 spell.Effects[0].Data!.Magnitude = magnitude;
                 spell.Effects[0].Data!.Duration = duration;
             }
-
+            
+            Effect damageStamina = new()
+            {
+                BaseEffect = Engarde.MagicEffect.MCT_DamageStaminaByWeapon,
+                Data = new EffectData
+                {
+                    Magnitude = 0,
+                    Area = 0,
+                    Duration = 0
+                }
+            };
+            Effect knockdownByWeapon = new()
+            {
+                BaseEffect = Engarde.MagicEffect.MCT_KnockdownByWeapon,
+                Data = new EffectData
+                {
+                    Magnitude = 0,
+                    Area = 0,
+                    Duration = 0
+                }
+            };
 
             var spellCopy = CopySpell(state, Engarde.Spell.MCT_PowerAttackCoolDownSpell);
             spellCopy.Effects[0].Data!.Duration = _settings.Value.powerAttacks.powerAttackCooldown;
 
             spellCopy = CopySpell(state, Engarde.Spell.MCT_NoStaminaRegenWhileRunning);
             spellCopy.Effects[0].Data!.Magnitude = _settings.Value.staminaSettings.runningStaminaRatePenalty;
+            
+            if (_settings.Value.weaponSettings.weakToArmor)
+            {
+                spellCopy = CopySpell(state, Engarde.Spell.MCT_NormalAttackSpell);
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_HitRepelledRight,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 0
+                    }
+                });
+                spellCopy.Effects.Add(new Effect
+                {
+                    BaseEffect = Engarde.MagicEffect.MCT_HitRepelledLeft,
+                    Data = new EffectData
+                    {
+                        Magnitude = 0,
+                        Area = 0,
+                        Duration = 0
+                    }
+                });
+            }
+
+            if (_settings.Value.weaponSettings.bluntKnocksDown)
+            {
+                spellCopy = CopySpell(state, Engarde.Spell.MCT_NormalAttackSpell);
+                spellCopy.Effects.Add(damageStamina);
+            }
+
+            if (_settings.Value.weaponSettings.bluntKnocksDown)
+            {
+                spellCopy = CopySpell(state, Engarde.Spell.MCT_PowerAttackSpell);
+                spellCopy.Effects.Add(damageStamina);
+                spellCopy.Effects.Add(knockdownByWeapon);
+            }
+
+            if (_settings.Value.weaponSettings.bluntKnocksDown)
+            {
+                spellCopy = CopySpell(state, Engarde.Spell.MCT_SidePowerAttackSpell);
+                spellCopy.Effects.Add(damageStamina);
+            }
+
+            if (_settings.Value.weaponSettings.bluntKnocksDown)
+            {
+                spellCopy = CopySpell(state, Engarde.Spell.MCT_BackPowerAttackSpell);
+                spellCopy.Effects.Add(damageStamina);
+                spellCopy.Effects.Add(knockdownByWeapon);
+            }
 
             spellCopy = CopySpell(state, Engarde.Spell.MCT_MeleeActorMonitorSpell);
             if (_settings.Value.npcSettings.staminaManagement)
@@ -2221,6 +2411,8 @@ namespace Engarde_Synthesis
                 Race raceCopy = state.PatchMod.Races.GetOrAddAsOverride(race);
                 bool growlEnabled =
                     state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp"));
+                bool enderalEnabled =
+                    state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Enderal - Forgotten Stories.esm"));
                 string behavior = raceCopy.BehaviorGraph.Male?.File ?? "";
                 switch (behavior)
                 {
@@ -2244,6 +2436,7 @@ namespace Engarde_Synthesis
                         break;
                     }
                     case "Actors\\Draugr\\DraugrProject.hkx":
+                    case "Actors\\Draugr\\DraugrSkeletonProject.hkx":
                         if (raceCopy.EditorID!.Contains("Skeleton"))
                         {
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_ArmoredKW);
@@ -2420,8 +2613,9 @@ namespace Engarde_Synthesis
                         raceCopy.AddKeyword(Engarde.Keyword.MCT_StaminaControlledKW);
 
                         raceCopy.Regen[BasicStat.Stamina] = 1;
+                        raceCopy.UnarmedReach = 150; // any shorter than 127 will result in werewolf keep retreating
 
-                        bool isWerebeast = false;
+                        bool isWerebeast;
                         if (raceCopy.EditorID?.Contains("Werebear") ?? false)
                         {
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower2);
@@ -2438,39 +2632,37 @@ namespace Engarde_Synthesis
                                 raceCopy.UnarmedDamage = 25 * _settings.Value.npcSettings.unarmedDamageMult;
                             }
 
-                            raceCopy.UnarmedReach = 145;
                             raceCopy.Starting[BasicStat.Health] = 1000;
                             raceCopy.Starting[BasicStat.Stamina] = 450;
                             isWerebeast = true;
                         }
-                        else if (raceCopy.EditorID!.Contains("Were"))
+                        else if (enderalEnabled && !raceCopy.EditorID!.Contains("Player"))
                         {
+                            // enderal's werewolf based mobs
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
+                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
+
+                            raceCopy.BaseMass = 1.4f;
+                            raceCopy.UnarmedDamage = 10 * _settings.Value.npcSettings.unarmedDamageMult;
+                            isWerebeast = false;
+                        }
+                        else
+                        {
+                            // Skyrim werewolf and Enderal player werewolf
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
                             raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist3);
                             raceCopy.ActorEffect!.Add(Engarde.Spell.MCT_BonusArmor250);
 
                             raceCopy.BaseMass = 3;
-                            if (growlEnabled)
-                            {
-                                raceCopy.UnarmedDamage = 10;
-                            }
-                            else
+                            // growl and enderal have their own damage scaling, don't mess with it
+                            if (!enderalEnabled && !growlEnabled)
                             {
                                 raceCopy.UnarmedDamage = 15 * _settings.Value.npcSettings.unarmedDamageMult;
                             }
 
-                            raceCopy.UnarmedReach = 145;
                             raceCopy.Starting[BasicStat.Health] = 300;
                             raceCopy.Starting[BasicStat.Stamina] = 200;
                             isWerebeast = true;
-                        }
-                        else
-                        {
-                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerPower1);
-                            raceCopy.AddKeyword(Engarde.Keyword.MCT_StaggerResist1);
-
-                            raceCopy.BaseMass = 1.4f;
-                            raceCopy.UnarmedDamage = 8 * _settings.Value.npcSettings.unarmedDamageMult;
                         }
 
                         raceCopy.Attacks.Where(IsValidAttack).ForEach(attack =>
@@ -2515,7 +2707,6 @@ namespace Engarde_Synthesis
                 PatchWeaponSpeedEffects(state, weaponSpeedEffects, leftWeaponSpeedEffects);
                 PatchWeaponSpeedSpell(state, weaponSpeedEffects, leftWeaponSpeedEffects);
             }
-
             PatchProjectiles(state);
             PatchMovement(state);
         }
