@@ -1923,7 +1923,7 @@ namespace Engarde_Synthesis
                     });
                 }
 
-                bool Predicate(ISpellGetter spell)
+                /*bool Predicate(ISpellGetter spell)
                 {
                     return spell.Effects.Any(x =>
                     {
@@ -1933,12 +1933,12 @@ namespace Engarde_Synthesis
                             .Contains(MagicEffect.Flag.DispelWithKeywords);
                         return !isDispeling && isFireSpell;
                     });
-                }
+                }*/
                 
-                foreach (ISpellGetter spell in state.LoadOrder.PriorityOrder.Spell().WinningOverrides().Where(Predicate))
+                /*foreach (ISpellGetter spell in state.LoadOrder.PriorityOrder.Spell().WinningOverrides().Where(Predicate))
                 {
                     Console.WriteLine(spell.EditorID);
-                }
+                }*/
             }
         }
 
