@@ -2160,10 +2160,9 @@ namespace Engarde_Synthesis
                 return effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult ||
                        effect.SecondActorValue == ActorValue.WeaponSpeedMult;
             }
-            catch (NullReferenceException e)
+            catch (Exception e)
             {
-                Console.WriteLine("\n   Formkey: " + effect.FormKey + "editorID: " + effect.EditorID);
-                throw;
+                throw RecordException.Enrich(e, effect);
             }
         }
 
