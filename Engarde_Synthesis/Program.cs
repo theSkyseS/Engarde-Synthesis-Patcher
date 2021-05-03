@@ -2138,11 +2138,11 @@ namespace Engarde_Synthesis
         {
             List<IMagicEffectGetter> winningOverrides =
                 state.LoadOrder.PriorityOrder.WinningOverrides<IMagicEffectGetter>().ToList();
-
             
             weaponSpeedEffects.Add(
                 winningOverrides
-                    .Where(PatchPredicate)
+                    .Where(effect => effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult ||
+                           effect.SecondActorValue == ActorValue.WeaponSpeedMult)
                     .Select(effect => effect.AsNullableLink()));
 
             leftWeaponSpeedEffects.Add(
@@ -2152,20 +2152,7 @@ namespace Engarde_Synthesis
                         effect.SecondActorValue == ActorValue.LeftWeaponSpeedMultiply)
                     .Select(effect => effect.AsNullableLink()));
         }
-
-        private static bool PatchPredicate(IMagicEffectGetter effect)
-        {
-            try
-            {
-                return effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult ||
-                       effect.SecondActorValue == ActorValue.WeaponSpeedMult;
-            }
-            catch (Exception e)
-            {
-                throw RecordException.Enrich(e, effect);
-            }
-        }
-
+        
         private static void PatchWeaponSpeedSpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,
             HashSet<IFormLinkNullable<IMagicEffectGetter>> weaponSpeedEffects,
             HashSet<IFormLinkNullable<IMagicEffectGetter>> leftWeaponSpeedEffects)
