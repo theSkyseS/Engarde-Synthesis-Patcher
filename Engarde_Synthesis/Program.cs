@@ -638,11 +638,11 @@ namespace Engarde_Synthesis
 
                         break;
                     case WeaponAnimationType.OneHandDagger:
-                        weaponCopy.ChangeWeapon(3, critMult: 2, critChance: WeaponCritChance.High,
+                        weaponCopy.ChangeWeapon(3, reachMult: 1.1f, critMult: 2, critChance: WeaponCritChance.High,
                             armorPenetration: WeaponArmorPenetration.Weak);
                         break;
                     case WeaponAnimationType.OneHandAxe:
-                        weaponCopy.ChangeWeapon(10, 1.1f, 0.8f, 1.1f);
+                        weaponCopy.ChangeWeapon(10, 1.1f, 0.9f, 1.1f);
                         break;
                     case WeaponAnimationType.OneHandMace:
                         weaponCopy.ChangeWeapon(12, critMult: 0.5f);
