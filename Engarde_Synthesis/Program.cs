@@ -978,6 +978,18 @@ namespace Engarde_Synthesis
                 });
                 idleCopy.Conditions.Add(new ConditionFloat
                 {
+                    // or not player
+                    CompareOperator = CompareOperator.EqualTo,
+                    Flags = Condition.Flag.OR,
+                    ComparisonValue = 0,
+                    Data = new FunctionConditionData
+                    {
+                        Function = Condition.Function.GetIsID,
+                        ParameterOneRecord = Skyrim.Npc.Player
+                    }
+                });
+                idleCopy.Conditions.Add(new ConditionFloat
+                {
                     // or don't have anything equipped on right hand
                     CompareOperator = CompareOperator.EqualTo,
                     Flags = Condition.Flag.OR,
