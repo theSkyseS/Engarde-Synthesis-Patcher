@@ -158,6 +158,20 @@ namespace Engarde_Synthesis
         }
 
         /**
+        <summary>
+         Checks if Attack has attack type before setting a new attack type keyword
+        </summary>
+       */
+        private static void setAttackType(IAttack attack, FormLink<IKeywordGetter> keyword)
+        {
+            if (!attack.AttackData!.AttackType.IsNull)
+            {
+                return;
+            }
+            attack.AttackData!.AttackType = keyword;
+        }
+
+        /**
          <summary>
           Checks if Attack has AttackData, Stagger and AttackEvent
          </summary>
@@ -261,7 +275,7 @@ namespace Engarde_Synthesis
             if (attackEvent.Contains("Forward") || attackEvent.Contains("Lunge") || attackEvent.Contains("Bite"))
             {
                 attack.AttackData.StrikeAngle = 28;
-                attack.AttackData.AttackType = Engarde.Keyword.MCT_VerticalAttack;
+                setAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
             }
 
             switch (attackEvent)
@@ -319,13 +333,13 @@ namespace Engarde_Synthesis
                     else if (attackEvent.Contains("Chop"))
                     {
                         ChangeBasicAttackStats(attack, 25);
-                        attack.AttackData.AttackType = Engarde.Keyword.MCT_VerticalAttack;
+                        setAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
                     }
                     else if (attackEvent.Contains("attack") && attackEvent.Contains("Start") &&
                              attackEvent.Contains("Sprint"))
                     {
                         ChangeBasicAttackStats(attack, 28, 2);
-                        attack.AttackData.AttackType = Engarde.Keyword.MCT_SprintAttack;
+                        setAttackType(attack, Engarde.Keyword.MCT_SprintAttack);
                     }
 
                     break;
@@ -384,7 +398,7 @@ namespace Engarde_Synthesis
                 case "AttackStartLeftRunningPower":
                 case "AttackStartRightRunningPower":
                     ChangeBasicAttackStats(attack, 30, attackAngle: 0);
-                    attack.AttackData.AttackType = Engarde.Keyword.MCT_VerticalAttack;
+                    setAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
                     if (isWerebeast)
                     {
                         attack.AttackData.Spell = Engarde.Spell.MCT_BeastTackleAttackSpell;
@@ -488,7 +502,7 @@ namespace Engarde_Synthesis
             {
                 case "attackPowerStart_ForwardPowerAttack":
                     ChangeBasicAttackStats(attack, 15, 2, attackAngle: 10);
-                    attack.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack;
+                    setAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
                     break;
                 case "attackPowerStart_Stomp":
                     ChangeBasicAttackStats(attack, 30, 0.3f);
@@ -2308,7 +2322,7 @@ namespace Engarde_Synthesis
                 if (raceData.LowAttacks)
                 {
                     raceCopy.Attacks.Where(IsValidAttack).ForEach(x =>
-                        x.AttackData!.AttackType = Engarde.Keyword.MCT_VerticalAttack);
+                        setAttackType(x, Engarde.Keyword.MCT_VerticalAttack));
                 }
 
                 if (raceData.RemoveSpell)
