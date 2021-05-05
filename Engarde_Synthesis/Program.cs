@@ -1191,15 +1191,10 @@ namespace Engarde_Synthesis
 
         private static void PatchWerewolves(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            if (!_settings.Value.npcSettings.werewolfTweaks || !_settings.Value.powerAttacks.powerAttackTweaks ||
-                state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Brevi_MoonlightTales.esp")) ||
-                state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Moonlight Tales Special Edition.esp")))
+            if (!_settings.Value.npcSettings.werewolfTweaks)
             {
                 return;
             }
-
-            IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfSheathe);
-            idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTPowerAttackRootBeast;
 
             ConditionFloat condition = new()
             {
@@ -1207,19 +1202,31 @@ namespace Engarde_Synthesis
                 ComparisonValue = _settings.Value.staminaSettings.minimumStamina,
                 Data = new FunctionConditionData
                 {
-                    Function = Condition.Function.GetActorValue, ParameterOneNumber = 26
+                    Function = Condition.Function.GetActorValue,
+                    ParameterOneNumber = 26
                 }
             };
+            IIdleAnimation idleCopy;
+
+            if (!_settings.Value.powerAttacks.powerAttackTweaks ||
+                state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Brevi_MoonlightTales.esp")) ||
+                state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Moonlight Tales Special Edition.esp")))
+            {
+                return;
+            }
+
+            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.AttackStartDualBackHand);
+            idleCopy.Conditions.Add(condition);
+            idleCopy.AnimationEvent = "AttackStartDual";
+
+            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfSheathe);
+            idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTPowerAttackRootBeast;
 
             idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfRightAttackFast);
             idleCopy.Conditions.Add(condition);
 
             idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfAttackLeftFast);
             idleCopy.Conditions.Add(condition);
-
-            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.AttackStartDualBackHand);
-            idleCopy.Conditions.Add(condition);
-            idleCopy.AnimationEvent = "AttackStartDual";
 
             idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfLeftPowerAttackRoot);
             idleCopy.Conditions[3].CompareOperator = CompareOperator.NotEqualTo;
