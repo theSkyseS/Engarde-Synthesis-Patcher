@@ -605,7 +605,7 @@ namespace Engarde_Synthesis
         private static void PatchWeapons(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             foreach (IWeaponGetter weapon in state.LoadOrder.PriorityOrder.Weapon().WinningOverrides()
-                .Where(weapon => weapon.Template.IsNull && weapon.Data != null))
+                .Where(weapon => weapon.Template.IsNull && weapon.Data != null && !weapon.EditorID!.StartsWith("REQ_Dummy_")))
             {
                 Weapon weaponCopy = state.PatchMod.Weapons.GetOrAddAsOverride(weapon);
                 weaponCopy.Data!.Speed *= _settings.Value.weaponSettings.weaponSpeedMult;
