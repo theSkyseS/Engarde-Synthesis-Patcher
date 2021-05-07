@@ -8,6 +8,7 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
         {
             private static FormLink<IIdleAnimationGetter> Construct(uint id) => new(ModKey.MakeFormKey(id));
             public static FormLink<IIdleAnimationGetter> OutOfStamina => Construct(0x2abdb);
+            public static FormLink<IIdleAnimationGetter> MCTPowerAttackRoot => Construct(0x2a646e);
             public static FormLink<IIdleAnimationGetter> MCTPowerAttack => Construct(0x263956);
             public static FormLink<IIdleAnimationGetter> MCTPowerAttackLeftHandRoot => Construct(0x263957);
             public static FormLink<IIdleAnimationGetter> MCTPowerAttackLeftHandRight => Construct(0x26395a);
@@ -38,6 +39,7 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
             public static FormLink<IIdleAnimationGetter> MCTHeavyArmorDodge => Construct(0x27ddb4);
             public static FormLink<IIdleAnimationGetter> MCTDodgeHeavyArmorBackward => Construct(0x27ddb5);
             public static FormLink<IIdleAnimationGetter> MCTDodgeHeavyArmorLeft => Construct(0x27ddb6);
+            public static FormLink<IIdleAnimationGetter> MCTDefensiveMovesRoot => Construct(0x2a84c1);
             public static FormLink<IIdleAnimationGetter> MCTDefensiveMoves => Construct(0x27ddb7);
             public static FormLink<IIdleAnimationGetter> MCTDodgeLightArmorLeft => Construct(0x27ddb8);
             public static FormLink<IIdleAnimationGetter> MCTDodgeLightArmorRight => Construct(0x27ddb9);
@@ -63,7 +65,7 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
             public static FormLink<IIdleAnimationGetter> MCTRollLeft => Construct(0x28fb5e);
             public static FormLink<IIdleAnimationGetter> MCTRollBack => Construct(0x28fb5f);
             public static FormLink<IIdleAnimationGetter> MCTLightArmorDodge => Construct(0x292113);
-            public static FormLink<IIdleAnimationGetter> MCTPowerAttackRootBeast => Construct(0x29369e);
+            public static FormLink<IIdleAnimationGetter> MCTPowerAttackBeastRoot => Construct(0x29369e);
             public static FormLink<IIdleAnimationGetter> MCTPowerAttackForwardBeast => Construct(0x29369f);
             public static FormLink<IIdleAnimationGetter> MCTPowerAttackStandingBeast => Construct(0x2936a0);
             public static FormLink<IIdleAnimationGetter> MCTPowerAttackBackwardBeast => Construct(0x2936a1);

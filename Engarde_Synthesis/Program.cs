@@ -21,7 +21,6 @@ namespace Engarde_Synthesis
         #region Statics
 
         private static Lazy<Settings.Settings> _settings = null!;
-        private static bool _foundAnotherSneakRootChild;
 
         #endregion
 
@@ -257,7 +256,7 @@ namespace Engarde_Synthesis
                             {
                                 attack.AttackData.Spell = Engarde.Spell.MCT_PowerBashAttackSpell;
                             }
-                            if (_settings.Value.basicAttacks.basicAttackTweaks)
+                            else if (_settings.Value.basicAttacks.basicAttackTweaks)
                             {
                                 attack.AttackData.Spell = Engarde.Spell.MCT_BashAttackSpell;
                             }
@@ -581,8 +580,6 @@ namespace Engarde_Synthesis
 
         private static void PatchGlobals(this IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            ChangeGlobalShortValue(state, Engarde.Global.MCT_SprintToSneakEnabled,
-                _settings.Value.sprintToSneak ? 1 : 0);
             ChangeGlobalShortValue(state, Engarde.Global.MCT_AttackSpeedFixEnabled,
                 _settings.Value.fixAttackSpeed ? 1 : 0);
             ChangeGlobalShortValue(state, Engarde.Global.MCT_PlayerAttackControlEnabled,
@@ -938,9 +935,8 @@ namespace Engarde_Synthesis
 
             if (_settings.Value.powerAttacks.powerAttackTweaks)
             {
-                IIdleAnimation idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTPowerAttack);
+                IIdleAnimation idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTPowerAttackRoot);
                 idleCopy.RelatedIdles[0] = Skyrim.IdleAnimation.SheathRight;
-                idleCopy.RelatedIdles[1] = Skyrim.IdleAnimation.DefaultSheathe;
             }
 
             if (_settings.Value.npcSettings.dragonTweaks)
@@ -1211,7 +1207,16 @@ namespace Engarde_Synthesis
                     ParameterOneNumber = 26
                 }
             };
-            IIdleAnimation idleCopy;
+
+            IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfRightAttackFast);
+            idleCopy.Conditions.Add(condition);
+
+            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfAttackLeftFast);
+            idleCopy.Conditions.Add(condition);
+
+            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.AttackStartDualBackHand);
+            idleCopy.Conditions.Add(condition);
+            idleCopy.AnimationEvent = "AttackStartDual";
 
             if (!_settings.Value.powerAttacks.powerAttackTweaks ||
                 state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Brevi_MoonlightTales.esp")) ||
@@ -1220,26 +1225,15 @@ namespace Engarde_Synthesis
                 return;
             }
 
-            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.AttackStartDualBackHand);
-            idleCopy.Conditions.Add(condition);
-            idleCopy.AnimationEvent = "AttackStartDual";
-
-            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfSheathe);
-            idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTPowerAttackRootBeast;
-
-            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfRightAttackFast);
-            idleCopy.Conditions.Add(condition);
-
-            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfAttackLeftFast);
-            idleCopy.Conditions.Add(condition);
-
+            // vanilla power attack, disable for player
             idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfLeftPowerAttackRoot);
             idleCopy.Conditions[3].CompareOperator = CompareOperator.NotEqualTo;
 
             idleCopy = CopyIdle(state, Skyrim.IdleAnimation.WerewolfRightPowerAttackRoot);
             idleCopy.Conditions[3].CompareOperator = CompareOperator.NotEqualTo;
 
-            idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTPowerAttackRootBeast);
+            // new power attack
+            idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTPowerAttackBeastRoot);
             idleCopy.RelatedIdles[0] = Skyrim.IdleAnimation.WerewolfSheathRoot;
         }
 
@@ -1277,38 +1271,87 @@ namespace Engarde_Synthesis
 
         private static void PatchIdles(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            if (!_settings.Value.defensiveActions.defensiveActions)
-            {
-                return;
-            }
+            IIdleAnimation idleCopy;
 
             foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.IdleAnimation().WinningOverrides()
                 .Where(idle => idle.EditorID != "MCTDefensiveMoves" && idle.EditorID != "BlockHit" &&
-                               idle.EditorID != "SneakStart" && idle.EditorID != "SneakStop"))
+                       idle.EditorID != "MCTPowerAttackRoot" && idle.EditorID != "MCTPowerAttackBeastRoot" && idle.EditorID != "MCTDefensiveMovesRoot"))
             {
-                if (Equals(idle.RelatedIdles[0], Skyrim.IdleAnimation.SneakRoot) && idle.RelatedIdles[1].IsNull)
+                if (_settings.Value.powerAttacks.powerAttackTweaks && Equals(idle.RelatedIdles[0], Skyrim.IdleAnimation.SheathRight) && idle.RelatedIdles[1].IsNull)
                 {
-                    Condition wantToSneak = new ConditionFloat
-                    {
-                        CompareOperator = CompareOperator.NotEqualTo,
-                        ComparisonValue = 1,
-                        Data = new FunctionConditionData
-                        {
-                            Function = Condition.Function.GetVMQuestVariable,
-                            ParameterOneRecord = Engarde.Quest.MCT_SneakKeyListener,
-                            ParameterTwoString = "::wantsToSneak_var"
-                        }
-                    };
-                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-                    idleCopy.Conditions.Add(wantToSneak);
-                    idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTDefensiveMoves;
-                    _foundAnotherSneakRootChild = true;
+                    idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                    idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTPowerAttackRoot;
+                    continue;
+                }
+
+                if (_settings.Value.powerAttacks.powerAttackTweaks && Equals(idle.RelatedIdles[0], Skyrim.IdleAnimation.WerewolfSheathRoot) && idle.RelatedIdles[1].IsNull)
+                {
+                    idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                    idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTPowerAttackBeastRoot;
+                    continue;
+                }
+
+                if (_settings.Value.defensiveActions.defensiveActions && Equals(idle.RelatedIdles[0], Skyrim.IdleAnimation.SneakRoot) && idle.RelatedIdles[1].IsNull)
+                {
+                    idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                    idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTDefensiveMovesRoot;
+                    continue;
                 }
             }
+
+            Condition isNotPlayer = new ConditionFloat
+            {
+                ComparisonValue = 0,
+                CompareOperator = CompareOperator.EqualTo,
+                Flags = Condition.Flag.OR,
+                Data = new FunctionConditionData
+                {
+                    Function = Condition.Function.GetIsID,
+                    ParameterOneRecord = Skyrim.Npc.Player
+                }
+            };
+
+            Condition sprintToSneakIsOff = new ConditionFloat
+            {
+                ComparisonValue = 0,
+                CompareOperator = CompareOperator.EqualTo,
+                Flags = Condition.Flag.OR,
+                Data = new FunctionConditionData
+                {
+                    Function = Condition.Function.GetGlobalValue,
+                    ParameterOneRecord = Engarde.Global.MCT_SprintToSneakEnabled
+                }
+            };
+
+            Condition isNotMovingForward = new ConditionFloat
+            {
+                ComparisonValue = 1,
+                CompareOperator = CompareOperator.NotEqualTo,
+                Data = new FunctionConditionData
+                {
+                    Function = Condition.Function.GetMovementDirection
+                }
+            };
+
+            // sneak start/stop, only perform for others or when player wants to sneak
+            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.SneakStart);
+            idleCopy.Conditions.Add(isNotPlayer);
+            idleCopy.Conditions.Add(sprintToSneakIsOff);
+            idleCopy.Conditions.Add(isNotMovingForward);
+
+            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.SneakStop);
+            idleCopy.Conditions.Add(isNotPlayer);
+            idleCopy.Conditions.Add(sprintToSneakIsOff);
+            idleCopy.Conditions.Add(isNotMovingForward);
         }
 
         private static void PatchDefensiveMoves(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
+            if (!_settings.Value.defensiveActions.defensiveActions)
+            {
+                return;
+            }
+            
             Condition isPowerBlocking = new ConditionFloat
             {
                 ComparisonValue = 0,
@@ -1319,38 +1362,7 @@ namespace Engarde_Synthesis
                     ParameterOneRecord = Engarde.MagicEffect.MCT_PowerBlocking
                 }
             };
-            Condition isNotMovingForward = new ConditionFloat
-            {
-                ComparisonValue = 1,
-                CompareOperator = CompareOperator.NotEqualTo,
-                Data = new FunctionConditionData
-                {
-                    Function = Condition.Function.GetMovementDirection
-                }
-            };
-            Condition isNotPlayer = new ConditionFloat
-            {
-                ComparisonValue = 1,
-                CompareOperator = CompareOperator.NotEqualTo,
-                Flags = Condition.Flag.OR,
-                Data = new FunctionConditionData
-                {
-                    Function = Condition.Function.GetIsID,
-                    ParameterOneRecord = Skyrim.Npc.Player
-                }
-            };
-            Condition isSneakPressed = new ConditionFloat
-            {
-                ComparisonValue = 1,
-                CompareOperator = CompareOperator.EqualTo,
-                Flags = Condition.Flag.OR,
-                Data = new FunctionConditionData
-                {
-                    Function = Condition.Function.GetVMQuestVariable,
-                    ParameterOneRecord = Engarde.Quest.MCT_SneakKeyListener,
-                    ParameterTwoString = "::wantsToSneak_var"
-                }
-            };
+            
             Condition isBlocking = new ConditionFloat
             {
                 CompareOperator = CompareOperator.EqualTo,
@@ -1365,51 +1377,24 @@ namespace Engarde_Synthesis
             {
                 CompareOperator = CompareOperator.EqualTo,
                 ComparisonValue = 1,
-                Flags = Condition.Flag.OR,
                 Data = new FunctionConditionData
                 {
                     Function = Condition.Function.GetGraphVariableInt,
                     ParameterOneString = "IsStaggering"
                 }
             };
-            IIdleAnimation idleCopy;
-            if (_settings.Value.defensiveActions.defensiveActions)
+
+            
+            IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.BlockHit);
+            idleCopy.Conditions.Add(isPowerBlocking);
+
+            idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTDefensiveMovesRoot);
+            idleCopy.RelatedIdles[0] = Skyrim.IdleAnimation.SneakRoot;
+
+            if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Ultimate Dodge Mod.esp")))
             {
-                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.BlockHit);
-                idleCopy.Conditions.Add(isPowerBlocking);
-
-                idleCopy = CopyIdle(state, Engarde.IdleAnimation.MCTDefensiveMoves);
-                idleCopy.RelatedIdles[0] = Skyrim.IdleAnimation.SneakRoot;
-
-                if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Ultimate Dodge Mod.esp")))
-                {
-                    idleCopy.Conditions.Add(isBlocking);
-                    idleCopy.Conditions.Add(isStaggered);
-                }
-            }
-
-            if (_settings.Value.sprintToSneak)
-            {
-                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.SneakStart);
-                idleCopy.Conditions.Add(isNotMovingForward);
-            }
-
-            if (_settings.Value.defensiveActions.defensiveActions)
-            {
-                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.SneakStart);
-                idleCopy.Conditions.Add(isNotPlayer);
-                idleCopy.Conditions.Add(isSneakPressed);
-
-                if (!_foundAnotherSneakRootChild)
-                {
-                    idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTDefensiveMoves;
-                }
-            }
-
-            if (_settings.Value.sprintToSneak)
-            {
-                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.SneakStop);
-                idleCopy.Conditions.Add(isNotMovingForward);
+                idleCopy.Conditions.Add(isBlocking);
+                idleCopy.Conditions.Add(isStaggered);
             }
         }
 
