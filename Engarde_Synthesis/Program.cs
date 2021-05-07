@@ -240,7 +240,7 @@ namespace Engarde_Synthesis
                     if (attack.AttackData.Spell.IsNull)
                     {
                         if ((attackEvent.Contains("PowerStartLeft") || attackEvent.Contains("PowerStartRight")) &&
-                            _settings.Value.basicAttacks.basicAttackTweaks)
+                            _settings.Value.powerAttacks.powerAttackTweaks)
                         {
                             attack.AttackData.Spell = Engarde.Spell.MCT_SidePowerAttackSpell;
                         }
@@ -250,12 +250,17 @@ namespace Engarde_Synthesis
                         {
                             attack.AttackData.Spell = Engarde.Spell.MCT_BackPowerAttackSpell;
                         }
-                        else if (attack.AttackData.Flags.HasFlag(AttackData.Flag.BashAttack) &&
-                                 _settings.Value.basicAttacks.basicAttackTweaks)
+                        else if (attack.AttackData.Flags.HasFlag(AttackData.Flag.BashAttack))
                         {
-                            attack.AttackData.Spell = attack.AttackData.Flags.HasFlag(AttackData.Flag.PowerAttack)
-                                ? Engarde.Spell.MCT_PowerBashAttackSpell
-                                : Engarde.Spell.MCT_BashAttackSpell;
+                            if (attack.AttackData.Flags.HasFlag(AttackData.Flag.PowerAttack) &&
+                                _settings.Value.powerAttacks.powerAttackTweaks)
+                            {
+                                attack.AttackData.Spell = Engarde.Spell.MCT_PowerBashAttackSpell;
+                            }
+                            if (_settings.Value.basicAttacks.basicAttackTweaks)
+                            {
+                                attack.AttackData.Spell = Engarde.Spell.MCT_BashAttackSpell;
+                            }
                         }
                         else if (attack.AttackData.Flags.HasFlag(AttackData.Flag.PowerAttack) &&
                                  _settings.Value.staggerSettings.weaponStagger)
