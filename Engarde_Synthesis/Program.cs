@@ -688,11 +688,10 @@ namespace Engarde_Synthesis
 
         private static void PatchRaces(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            List<IRaceGetter> racesToPatch = state.LoadOrder.PriorityOrder.Race().WinningOverrides()
-                .AsParallel()
+            foreach (var raceCopy in state.LoadOrder.PriorityOrder.Race()
+                .WinningOverrides()
                 .Where(race => race.EditorID != null)
-                .ToList();
-            foreach (var raceCopy in racesToPatch.Select(race => state.PatchMod.Races.GetOrAddAsOverride(race)))
+                .Select(race => state.PatchMod.Races.GetOrAddAsOverride(race)))
             {
                 raceCopy.AngularAccelerationRate = _settings.Value.npcSettings.angularAccelerationMult * 0.25f;
                 raceCopy.UnarmedReach = 77;
@@ -1089,13 +1088,9 @@ namespace Engarde_Synthesis
             {
                 return;
             }
-
-            List<IIdleAnimationGetter> idlesToPatch = state.LoadOrder.PriorityOrder.IdleAnimation().WinningOverrides()
-                .AsParallel()
-                .Where(idle => !idle.EditorID.IsNullOrEmpty())
-                .ToList();
             
-            foreach (IIdleAnimationGetter idle in idlesToPatch)
+            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.IdleAnimation().WinningOverrides()
+                .Where(idle => !idle.EditorID.IsNullOrEmpty()))
             {
                 if (idle.EditorID!.Contains("MCTHeavyArmorDodge") || idle.EditorID.Contains("MCTLightArmorDodge"))
                 {
@@ -2152,12 +2147,14 @@ namespace Engarde_Synthesis
             
             weaponSpeedEffects.Add(
                 winningOverrides
+                    .AsParallel()
                     .Where(effect => effect.Archetype.ActorValue == ActorValue.WeaponSpeedMult ||
                            effect.SecondActorValue == ActorValue.WeaponSpeedMult)
                     .Select(effect => effect.AsNullableLink()));
 
             leftWeaponSpeedEffects.Add(
                 winningOverrides
+                    .AsParallel()
                     .Where(effect =>
                         effect.Archetype.ActorValue == ActorValue.LeftWeaponSpeedMultiply ||
                         effect.SecondActorValue == ActorValue.LeftWeaponSpeedMultiply)
@@ -2174,45 +2171,42 @@ namespace Engarde_Synthesis
                     (weaponSpeedEffects.Contains(x.BaseEffect) ||
                      leftWeaponSpeedEffects.Contains(x.BaseEffect)) && x.Data?.Magnitude > 1;
 
-                bool haveWeaponSpeedEffect = spell.Effects.Any(Predicate);
-                if (haveWeaponSpeedEffect)
-                {
-                    var spellCopy = state.PatchMod.Spells.GetOrAddAsOverride(spell);
-                    spellCopy.Effects.Where(Predicate).ForEach(effect => { effect.Data!.Magnitude -= 1; });
-                }
+                var haveWeaponSpeedEffect = spell.Effects.Any(Predicate);
+                if (!haveWeaponSpeedEffect) continue;
+                var spellCopy = state.PatchMod.Spells.GetOrAddAsOverride(spell);
+                spellCopy.Effects.Where(Predicate).ForEach(effect => { effect.Data!.Magnitude -= 1; });
             }
         }
 
         private static void PatchProjectiles(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            if (_settings.Value.npcSettings.dragonTweaks)
+            if (!_settings.Value.npcSettings.dragonTweaks) return;
+
+            static Projectile CopyProjectile(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState,
+                IFormLinkGetter<IProjectileGetter> projLink)
             {
-                static Projectile CopyProjectile(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState,
-                    IFormLinkGetter<IProjectileGetter> projLink)
-                {
-                    return patcherState.PatchMod.Projectiles.GetOrAddAsOverride(projLink, patcherState.LinkCache);
-                }
-
-                var projectileCopy = CopyProjectile(state, Skyrim.Projectile.DragonFrostProjectile01);
-                projectileCopy.Model = new Model
-                {
-                    File = "Magic\\FXFrostBallWispyProjectile.nif"
-                };
-                projectileCopy.Type = Projectile.TypeEnum.Missile;
-                projectileCopy.Speed = 500;
-                projectileCopy.CollisionRadius = 20;
-
-                // frost ball projectile, slower, bigger radius
-                projectileCopy = CopyProjectile(state, Skyrim.Projectile.DragonFrostBallWispyProjectile);
-                projectileCopy.Speed = 600;
-                projectileCopy.CollisionRadius = 10;
+                return patcherState.PatchMod.Projectiles.GetOrAddAsOverride(projLink, patcherState.LinkCache);
             }
+
+            var projectileCopy = CopyProjectile(state, Skyrim.Projectile.DragonFrostProjectile01);
+            projectileCopy.Model = new Model
+            {
+                File = "Magic\\FXFrostBallWispyProjectile.nif"
+            };
+            projectileCopy.Type = Projectile.TypeEnum.Missile;
+            projectileCopy.Speed = 500;
+            projectileCopy.CollisionRadius = 20;
+
+            // frost ball projectile, slower, bigger radius
+            projectileCopy = CopyProjectile(state, Skyrim.Projectile.DragonFrostBallWispyProjectile);
+            projectileCopy.Speed = 600;
+            projectileCopy.CollisionRadius = 10;
         }
 
         private static void PatchMovement(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             static IMovementType CopyMovt(IPatcherState<ISkyrimMod, ISkyrimModGetter> patcherState,
-                IFormLink<IMovementTypeGetter> movtLink)
+                IFormLinkGetter<IMovementTypeGetter> movtLink)
             {
                 return patcherState.PatchMod.MovementTypes.GetOrAddAsOverride(movtLink, patcherState.LinkCache);
             }
@@ -2430,8 +2424,7 @@ namespace Engarde_Synthesis
             };
             List<IRaceGetter> edgeCasesToPatch = state.LoadOrder.PriorityOrder.Race().WinningOverrides()
                 .AsParallel()
-                .Where(race => race.EditorID != null)
-                .Where(race => behaviours.Contains(race.BehaviorGraph.Male?.File ?? ""))
+                .Where(race => race.EditorID != null && behaviours.Contains(race.BehaviorGraph.Male?.File ?? ""))
                 .ToList();
             foreach (var race in edgeCasesToPatch)
             {
