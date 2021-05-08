@@ -534,8 +534,11 @@ namespace Engarde_Synthesis
                 armor.TemplateArmor.IsNull &&
                 (armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? false);
 
-            foreach (IArmorGetter armor in state.LoadOrder.PriorityOrder.Armor().WinningOverrides()
-                .Where(Predicate))
+            List<IArmorGetter> armorToPatch = state.LoadOrder.PriorityOrder.Armor().WinningOverrides()
+                .AsParallel()
+                .Where(Predicate)
+                .ToList();
+            foreach (IArmorGetter armor in armorToPatch)
             {
                 switch (armor.BodyTemplate!.ArmorType)
                 {
@@ -588,13 +591,15 @@ namespace Engarde_Synthesis
 
         private static void PatchWeapons(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (IWeaponGetter weapon in state.LoadOrder.PriorityOrder.Weapon().WinningOverrides()
-                .Where(weapon => weapon.Template.IsNull && weapon.Data != null))
+            List<IWeaponGetter> weaponsToPatch = state.LoadOrder.PriorityOrder.Weapon().WinningOverrides()
+                .AsParallel()
+                .Where(weapon => weapon.Template.IsNull && weapon.Data != null)
+                .ToList();
+            foreach (var weaponCopy in weaponsToPatch.Select(weapon => state.PatchMod.Weapons.GetOrAddAsOverride(weapon)))
             {
-                Weapon weaponCopy = state.PatchMod.Weapons.GetOrAddAsOverride(weapon);
                 weaponCopy.Data!.Speed *= _settings.Value.weaponSettings.weaponSpeedMult;
                 weaponCopy.Data!.Reach *= _settings.Value.weaponSettings.weaponReachMult;
-                ushort damage = weaponCopy.BasicStats!.Damage;
+                var damage = weaponCopy.BasicStats!.Damage;
                 weaponCopy.BasicStats!.Damage =
                     (ushort) Math.Round(damage * _settings.Value.weaponSettings.weaponDamageMult);
                 if (weaponCopy.BasicStats.Weight == 0)
@@ -683,10 +688,12 @@ namespace Engarde_Synthesis
 
         private static void PatchRaces(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (var race in state.LoadOrder.PriorityOrder.Race().WinningOverrides()
-                .Where(race => race.EditorID != null))
+            List<IRaceGetter> racesToPatch = state.LoadOrder.PriorityOrder.Race().WinningOverrides()
+                .AsParallel()
+                .Where(race => race.EditorID != null)
+                .ToList();
+            foreach (var raceCopy in racesToPatch.Select(race => state.PatchMod.Races.GetOrAddAsOverride(race)))
             {
-                Race raceCopy = state.PatchMod.Races.GetOrAddAsOverride(race);
                 raceCopy.AngularAccelerationRate = _settings.Value.npcSettings.angularAccelerationMult * 0.25f;
                 raceCopy.UnarmedReach = 77;
                 raceCopy.UnarmedDamage *= _settings.Value.npcSettings.unarmedDamageMult;
@@ -752,7 +759,12 @@ namespace Engarde_Synthesis
                                                                             npcRaceEdid.Contains("LurkerRace"));
             }
 
-            foreach (INpcGetter npc in state.LoadOrder.PriorityOrder.Npc().WinningOverrides().Where(Predicate))
+            List<INpcGetter> npcsToPatch = state.LoadOrder.PriorityOrder.Npc().WinningOverrides()
+                .AsParallel()
+                .Where(Predicate)
+                .ToList();
+            
+            foreach (INpcGetter npc in npcsToPatch)
             {
                 string npcRaceEdid = npc.Race.Resolve(state.LinkCache).EditorID!;
 
@@ -762,15 +774,13 @@ namespace Engarde_Synthesis
                 if (_settings.Value.staggerSettings.weaponStagger)
                 {
                     Npc npcCopy = npc.DeepCopy();
-                    bool changed = false;
+                    var changed = false;
                     npcCopy.Attacks.Where(IsValidAttack).ForEach(attack =>
                     {
-                        if (attack.AttackData!.Spell.IsNull &&
-                            !attack.AttackData.Flags.HasFlag(AttackData.Flag.BashAttack))
-                        {
-                            attack.AttackData.Spell = Engarde.Spell.MCT_NormalAttackSpell;
-                            changed = true;
-                        }
+                        if (!attack.AttackData!.Spell.IsNull ||
+                            attack.AttackData.Flags.HasFlag(AttackData.Flag.BashAttack)) return;
+                        attack.AttackData.Spell = Engarde.Spell.MCT_NormalAttackSpell;
+                        changed = true;
                     });
                     if (changed)
                     {
@@ -1020,59 +1030,57 @@ namespace Engarde_Synthesis
                 }
             };
 
-            if (_settings.Value.powerAttacks.powerAttackTweaks)
+            if (!_settings.Value.powerAttacks.powerAttackTweaks) return;
+            List<IIdleAnimation> idlesToDisable = new ()
             {
-                List<IIdleAnimation> idlesToDisable = new ()
+                CopyIdle(state, Skyrim.IdleAnimation.DualWieldPowerAttackRoot),
+                CopyIdle(state, Skyrim.IdleAnimation.DualWieldSpecialPowerAttack),
+                CopyIdle(state, Skyrim.IdleAnimation.AttackRightPower2HMForwardSprinting),
+                CopyIdle(state, Skyrim.IdleAnimation.AttackRightPower2HWForwardSprinting),
+                CopyIdle(state, Skyrim.IdleAnimation.AttackRightPowerForwardSprinting),
+                CopyIdle(state, Skyrim.IdleAnimation.H2HRightHandPowerAttack),
+                CopyIdle(state, Skyrim.IdleAnimation.H2HLeftHandPowerAttack)
+            };
+
+            idlesToDisable.ForEach(idle => idle.Conditions.Add(disableCondition));
+
+
+            IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.PowerBash);
+            idleCopy.Conditions[1] = disableCondition;
+
+
+            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.PowerAttack);
+            idleCopy.Conditions[0] = disableCondition;
+
+            // sheathe can be triggered from script too
+            ConditionFloat wantsToSheathe = new ()
+            {
+                CompareOperator = CompareOperator.EqualTo,
+                Flags = Condition.Flag.OR,
+                ComparisonValue = 1,
+                Data = new FunctionConditionData
                 {
-                    CopyIdle(state, Skyrim.IdleAnimation.DualWieldPowerAttackRoot),
-                    CopyIdle(state, Skyrim.IdleAnimation.DualWieldSpecialPowerAttack),
-                    CopyIdle(state, Skyrim.IdleAnimation.AttackRightPower2HMForwardSprinting),
-                    CopyIdle(state, Skyrim.IdleAnimation.AttackRightPower2HWForwardSprinting),
-                    CopyIdle(state, Skyrim.IdleAnimation.AttackRightPowerForwardSprinting),
-                    CopyIdle(state, Skyrim.IdleAnimation.H2HRightHandPowerAttack),
-                    CopyIdle(state, Skyrim.IdleAnimation.H2HLeftHandPowerAttack)
-                };
+                    Function = Condition.Function.GetVMQuestVariable,
+                    ParameterOneRecord = Engarde.Quest.MCT_SheathKeyListener,
+                    ParameterTwoString = "::wantsToSheathe_var"
+                }
+            };
 
-                idlesToDisable.ForEach(idle => idle.Conditions.Add(disableCondition));
-
-
-                IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.PowerBash);
-                idleCopy.Conditions[1] = disableCondition;
-
-
-                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.PowerAttack);
-                idleCopy.Conditions[0] = disableCondition;
-
-                // sheathe can be triggered from script too
-                ConditionFloat wantsToSheathe = new ()
-                {
-                    CompareOperator = CompareOperator.EqualTo,
-                    Flags = Condition.Flag.OR,
-                    ComparisonValue = 1,
-                    Data = new FunctionConditionData
-                    {
-                        Function = Condition.Function.GetVMQuestVariable,
-                        ParameterOneRecord = Engarde.Quest.MCT_SheathKeyListener,
-                        ParameterTwoString = "::wantsToSheathe_var"
-                    }
-                };
-
-                // default sheathe can be executed by NPC or by script
-                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.DefaultSheathe);
-                idleCopy.Conditions.Add(new ConditionFloat
-                {
+            // default sheathe can be executed by NPC or by script
+            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.DefaultSheathe);
+            idleCopy.Conditions.Add(new ConditionFloat
+            {
                     
-                    CompareOperator = CompareOperator.EqualTo,
-                    Flags = Condition.Flag.OR,
-                    ComparisonValue = 0,
-                    Data = new FunctionConditionData
-                    {
-                        Function = Condition.Function.GetIsID,
-                        ParameterOneRecord = Skyrim.Npc.Player,
-                    }
-                });
-                idleCopy.Conditions.Add(wantsToSheathe);
-            }
+                CompareOperator = CompareOperator.EqualTo,
+                Flags = Condition.Flag.OR,
+                ComparisonValue = 0,
+                Data = new FunctionConditionData
+                {
+                    Function = Condition.Function.GetIsID,
+                    ParameterOneRecord = Skyrim.Npc.Player,
+                }
+            });
+            idleCopy.Conditions.Add(wantsToSheathe);
         }
 
         private static void PatchDodges(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1082,8 +1090,12 @@ namespace Engarde_Synthesis
                 return;
             }
 
-            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.IdleAnimation().WinningOverrides()
-                .Where(idle => !idle.EditorID.IsNullOrEmpty()))
+            List<IIdleAnimationGetter> idlesToPatch = state.LoadOrder.PriorityOrder.IdleAnimation().WinningOverrides()
+                .AsParallel()
+                .Where(idle => !idle.EditorID.IsNullOrEmpty())
+                .ToList();
+            
+            foreach (IIdleAnimationGetter idle in idlesToPatch)
             {
                 if (idle.EditorID!.Contains("MCTHeavyArmorDodge") || idle.EditorID.Contains("MCTLightArmorDodge"))
                 {
@@ -1244,28 +1256,31 @@ namespace Engarde_Synthesis
                 return;
             }
 
-            foreach (IIdleAnimationGetter idle in state.LoadOrder.PriorityOrder.IdleAnimation().WinningOverrides()
+            List<IIdleAnimationGetter> idlesToPatch = state.LoadOrder.PriorityOrder.IdleAnimation().WinningOverrides()
+                .AsParallel()
                 .Where(idle => idle.EditorID != "MCTDefensiveMoves" && idle.EditorID != "BlockHit" &&
-                               idle.EditorID != "SneakStart" && idle.EditorID != "SneakStop"))
+                               idle.EditorID != "SneakStart" && idle.EditorID != "SneakStop")
+                .ToList();
+            
+            foreach (IIdleAnimationGetter idle in idlesToPatch)
             {
-                if (Equals(idle.RelatedIdles[0], Skyrim.IdleAnimation.SneakRoot) && idle.RelatedIdles[1].IsNull)
+                if (!Equals(idle.RelatedIdles[0], Skyrim.IdleAnimation.SneakRoot) ||
+                    !idle.RelatedIdles[1].IsNull) continue;
+                Condition wantToSneak = new ConditionFloat
                 {
-                    Condition wantToSneak = new ConditionFloat
+                    CompareOperator = CompareOperator.NotEqualTo,
+                    ComparisonValue = 1,
+                    Data = new FunctionConditionData
                     {
-                        CompareOperator = CompareOperator.NotEqualTo,
-                        ComparisonValue = 1,
-                        Data = new FunctionConditionData
-                        {
-                            Function = Condition.Function.GetVMQuestVariable,
-                            ParameterOneRecord = Engarde.Quest.MCT_SneakKeyListener,
-                            ParameterTwoString = "::wantsToSneak_var"
-                        }
-                    };
-                    IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
-                    idleCopy.Conditions.Add(wantToSneak);
-                    idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTDefensiveMoves;
-                    _foundAnotherSneakRootChild = true;
-                }
+                        Function = Condition.Function.GetVMQuestVariable,
+                        ParameterOneRecord = Engarde.Quest.MCT_SneakKeyListener,
+                        ParameterTwoString = "::wantsToSneak_var"
+                    }
+                };
+                IIdleAnimation idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
+                idleCopy.Conditions.Add(wantToSneak);
+                idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTDefensiveMoves;
+                _foundAnotherSneakRootChild = true;
             }
         }
 
@@ -1368,11 +1383,9 @@ namespace Engarde_Synthesis
                 }
             }
 
-            if (_settings.Value.sprintToSneak)
-            {
-                idleCopy = CopyIdle(state, Skyrim.IdleAnimation.SneakStop);
-                idleCopy.Conditions.Add(isNotMovingForward);
-            }
+            if (!_settings.Value.sprintToSneak) return;
+            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.SneakStop);
+            idleCopy.Conditions.Add(isNotMovingForward);
         }
 
         private static void PatchEffects(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1451,20 +1464,18 @@ namespace Engarde_Synthesis
                 //is it better than doing it for each effect separately?
             }
 
-            if (state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dragonborn.esm")))
-            {
-                IMagicEffect effectCopy = CopyEffect(state, Engarde.MagicEffect.MCT_DragonInjuryMouth);
+            if (!state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Dragonborn.esm"))) return;
+            IMagicEffect effectCopy = CopyEffect(state, Engarde.MagicEffect.MCT_DragonInjuryMouth);
 
-                ExtendedList<ScriptProperty> properties = effectCopy.VirtualMachineAdapter!.Scripts[0].Properties;
-                foreach (var scriptProperty in properties.Cast<ScriptObjectProperty>())
+            ExtendedList<ScriptProperty> properties = effectCopy.VirtualMachineAdapter!.Scripts[0].Properties;
+            foreach (var scriptProperty in properties.Cast<ScriptObjectProperty>())
+            {
+                scriptProperty.Object = scriptProperty.Name switch
                 {
-                    scriptProperty.Object = scriptProperty.Name switch
-                    {
-                        "shout13" => Dragonborn.Shout.DLC2DragonFireBreathShout06,
-                        "shout14" => Dragonborn.Shout.DLC2DragonFrostBreathShout06,
-                        _ => scriptProperty.Object
-                    };
-                }
+                    "shout13" => Dragonborn.Shout.DLC2DragonFireBreathShout06,
+                    "shout14" => Dragonborn.Shout.DLC2DragonFrostBreathShout06,
+                    _ => scriptProperty.Object
+                };
             }
         }
 
@@ -2264,6 +2275,7 @@ namespace Engarde_Synthesis
             Dictionary<string, IFormLink<ISpellGetter>> spells =
                 listing.Mod!.Spells.ToDictionary(x => x.EditorID!, x => x.AsLink());
             List<(IRaceGetter, RaceData)> races = state.LoadOrder.PriorityOrder.Race().WinningOverrides()
+                .AsParallel()
                 .Where(race => race.EditorID != null)
                 .SelectWhere(race =>
                     config.Races.TryGetValue(race.BehaviorGraph.Male?.File ?? "", out var raceData)
@@ -2271,7 +2283,7 @@ namespace Engarde_Synthesis
                         : TryGet<(IRaceGetter, RaceData)>.Failure)
                 .ToList();
 
-            foreach ((IRaceGetter, RaceData) tuple in races)
+            foreach (var tuple in races)
             {
                 var (race, raceData) = tuple;
 
@@ -2404,13 +2416,29 @@ namespace Engarde_Synthesis
 
         private static void PatchRacesEdgeCases(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            foreach (var race in state.LoadOrder.PriorityOrder.Race().WinningOverrides()
-                .Where(race => race.EditorID != null))
+            HashSet<string> behaviours = new()
+            {
+                "Actors\\AtronachFrost\\AtronachFrostProject.hkx",
+                "Actors\\Draugr\\DraugrProject.hkx",
+                "Actors\\Draugr\\DraugrSkeletonProject.hkx",
+                "Actors\\DwarvenSteamCenturion\\SteamProject.hkx",
+                "Actors\\Dragon\\DragonProject.hkx",
+                "Actors\\FrostbiteSpider\\FrostbiteSpiderProject.hkx",
+                "Actors\\Giant\\GiantProject.hkx",
+                "Actors\\Character\\DefaultMale.hkx",
+                "Actors\\WerewolfBeast\\WerewolfBeastProject.hkx"
+            };
+            List<IRaceGetter> edgeCasesToPatch = state.LoadOrder.PriorityOrder.Race().WinningOverrides()
+                .AsParallel()
+                .Where(race => race.EditorID != null)
+                .Where(race => behaviours.Contains(race.BehaviorGraph.Male?.File ?? ""))
+                .ToList();
+            foreach (var race in edgeCasesToPatch)
             {
                 Race raceCopy = state.PatchMod.Races.GetOrAddAsOverride(race);
-                bool growlEnabled =
+                var growlEnabled =
                     state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp"));
-                bool enderalEnabled =
+                var enderalEnabled =
                     state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Enderal - Forgotten Stories.esm"));
                 string behavior = raceCopy.BehaviorGraph.Male?.File ?? "";
                 switch (behavior)
