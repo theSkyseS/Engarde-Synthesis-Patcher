@@ -1991,6 +1991,25 @@ namespace Engarde_Synthesis
                     CopySpell(state, Dragonborn.Spell.DLC2crFireWyrmMeleeAttack)
                 };
                 staggeringAttackSpells.ForEach(AddStaggerEffects);
+
+                bool enderalEnabled =
+                    state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Enderal - Forgotten Stories.esm"));
+                if (enderalEnabled)
+                {
+                    // this spell's formId exist in vanilla Skyrim, must check if its Enderal
+                    spellCopy = CopySpell(state, Enderal.Spell.QyranianStance);
+                    spellCopy.Effects.Add(new Effect
+                    {
+                        BaseEffect = Engarde.MagicEffect.MCT_WeaponSpeedPenalty,
+                        Data = new EffectData
+                        {
+                            Magnitude = 1.0f,
+                            Area = 0,
+                            Duration = 0
+                        }
+                    });
+                }
+
                 bool containsGrowl =
                     state.LoadOrder.ContainsKey(ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp"));
 
