@@ -11,8 +11,4 @@
     <PackageReference Include="Mutagen.Bethesda.Synthesis" Version="0.18.2" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="FormKeys" />
-  </ItemGroup>
-
 </Project>
