@@ -14,7 +14,7 @@ using Noggog;
 namespace Engarde_Synthesis
 {
     /**
-     * Engarde Synthesis patcher, for Engarde v4.1
+     * Engarde Synthesis patcher, for Engarde v4.2
      */
     public static class Program
     {
