@@ -21,9 +21,6 @@ namespace Engarde_Synthesis.Settings
         [SynthesisSettingName("Defensive actions:")]
         public DefensiveActions defensiveActions { get; set; } = new();
 
-        [SynthesisSettingName("Use Sprint key to toggle sneak")]
-        public bool sprintToSneak { get; set; } = true;
-
         [SynthesisSettingName("Stagger settings:")]
         public StaggerSettings staggerSettings { get; set; } = new();
 
