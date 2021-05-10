@@ -9,7 +9,10 @@ namespace Engarde_Synthesis.Settings
 {
     public record Settings
     {
-	    [SynthesisSettingName("Attack Speed Fix")]
+        [SynthesisSettingName("For Engarde version (display only):")]
+        public string engardeVersion { get; set; } = "4.2.1";
+
+        [SynthesisSettingName("Attack Speed Fix")]
         public bool fixAttackSpeed { get; set; } = true;
         
         [SynthesisSettingName("Normal attacks:")]
