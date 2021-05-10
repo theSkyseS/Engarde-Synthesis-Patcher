@@ -1091,22 +1091,6 @@ namespace Engarde_Synthesis
                     ParameterTwoString = "::wantsToSheathe_var"
                 }
             };
-
-            // default sheathe can be executed by NPC or by script
-            idleCopy = CopyIdle(state, Skyrim.IdleAnimation.DefaultSheathe);
-            idleCopy.Conditions.Add(new ConditionFloat
-            {
-                    
-                CompareOperator = CompareOperator.EqualTo,
-                Flags = Condition.Flag.OR,
-                ComparisonValue = 0,
-                Data = new FunctionConditionData
-                {
-                    Function = Condition.Function.GetIsID,
-                    ParameterOneRecord = Skyrim.Npc.Player,
-                }
-            });
-            idleCopy.Conditions.Add(wantsToSheathe);
         }
 
         private static void PatchDodges(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
