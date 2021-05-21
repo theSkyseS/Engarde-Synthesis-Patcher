@@ -1,14 +1,15 @@
+using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Skyrim;
 
 namespace Mutagen.Bethesda.FormKeys.SkyrimSE
 {
     public static partial class Growl
     {
+        public readonly static ModKey ModKey = ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp");
+
         public static class Spell
         {
-            public readonly static ModKey ModKey = ModKey.FromNameAndExtension("Growl - Werebeasts of Skyrim.esp");
             private static FormLink<ISpellGetter> Construct(uint id) => new(ModKey.MakeFormKey(id));
-
             public static FormLink<ISpellGetter> HRI_Mortal_Spell_NPCCanMorph_Ab_Passives => Construct(0xaa06);
             public static FormLink<ISpellGetter> HRI_Mortal_Spell_NPCCanMorph_CD => Construct(0x2905a);
             public static FormLink<ISpellGetter> HRI_Howl_Spell_RevertForm => Construct(0x29060);

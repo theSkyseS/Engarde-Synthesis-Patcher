@@ -1,4 +1,6 @@
-﻿namespace Mutagen.Bethesda.FormKeys.SkyrimSE
+﻿using Mutagen.Bethesda.Plugins;
+
+namespace Mutagen.Bethesda.FormKeys.SkyrimSE
 {
     public static partial class Engarde
     {
