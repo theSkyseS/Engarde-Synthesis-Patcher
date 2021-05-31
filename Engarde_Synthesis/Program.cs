@@ -8,6 +8,9 @@ using Mutagen.Bethesda.FormKeys.SkyrimSE;
 using Mutagen.Bethesda.Skyrim;
 using System.Threading.Tasks;
 using Engarde_Synthesis.Settings;
+using Mutagen.Bethesda.Plugins;
+using Mutagen.Bethesda.Plugins.Aspects;
+using Mutagen.Bethesda.Plugins.Order;
 using Newtonsoft.Json;
 using Noggog;
 
@@ -161,7 +164,7 @@ namespace Engarde_Synthesis
          Checks if Attack has attack type before setting a new attack type keyword
         </summary>
        */
-        private static void setAttackType(IAttack attack, FormLink<IKeywordGetter> keyword)
+        private static void SetAttackType(IAttack attack, FormLink<IKeywordGetter> keyword)
         {
             if (!attack.AttackData!.AttackType.IsNull)
             {
@@ -279,7 +282,7 @@ namespace Engarde_Synthesis
             if (attackEvent.Contains("Forward") || attackEvent.Contains("Lunge") || attackEvent.Contains("Bite"))
             {
                 attack.AttackData.StrikeAngle = 28;
-                setAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
+                SetAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
             }
 
             switch (attackEvent)
@@ -337,13 +340,13 @@ namespace Engarde_Synthesis
                     else if (attackEvent.Contains("Chop"))
                     {
                         ChangeBasicAttackStats(attack, 25);
-                        setAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
+                        SetAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
                     }
                     else if (attackEvent.Contains("attack") && attackEvent.Contains("Start") &&
                              attackEvent.Contains("Sprint"))
                     {
                         ChangeBasicAttackStats(attack, 28, 2);
-                        setAttackType(attack, Engarde.Keyword.MCT_SprintAttack);
+                        SetAttackType(attack, Engarde.Keyword.MCT_SprintAttack);
                     }
 
                     break;
@@ -402,7 +405,7 @@ namespace Engarde_Synthesis
                 case "AttackStartLeftRunningPower":
                 case "AttackStartRightRunningPower":
                     ChangeBasicAttackStats(attack, 30, attackAngle: 0);
-                    setAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
+                    SetAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
                     if (isWerebeast)
                     {
                         attack.AttackData.Spell = Engarde.Spell.MCT_BeastTackleAttackSpell;
@@ -506,7 +509,7 @@ namespace Engarde_Synthesis
             {
                 case "attackPowerStart_ForwardPowerAttack":
                     ChangeBasicAttackStats(attack, 15, 2, attackAngle: 10);
-                    setAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
+                    SetAttackType(attack, Engarde.Keyword.MCT_VerticalAttack);
                     break;
                 case "attackPowerStart_Stomp":
                     ChangeBasicAttackStats(attack, 30, 0.3f);
@@ -1079,7 +1082,7 @@ namespace Engarde_Synthesis
             idleCopy.Conditions[0] = disableCondition;
 
             // sheathe can be triggered from script too
-            ConditionFloat wantsToSheathe = new ()
+            /*ConditionFloat wantsToSheathe = new ()
             {
                 CompareOperator = CompareOperator.EqualTo,
                 Flags = Condition.Flag.OR,
@@ -1090,7 +1093,7 @@ namespace Engarde_Synthesis
                     ParameterOneRecord = Engarde.Quest.MCT_SheathKeyListener,
                     ParameterTwoString = "::wantsToSheathe_var"
                 }
-            };
+            };*/
         }
 
         private static void PatchDodges(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -1289,7 +1292,6 @@ namespace Engarde_Synthesis
                 {
                     idleCopy = state.PatchMod.IdleAnimations.GetOrAddAsOverride(idle);
                     idleCopy.RelatedIdles[1] = Engarde.IdleAnimation.MCTDefensiveMovesRoot;
-                    continue;
                 }
             }
 
@@ -2329,7 +2331,7 @@ namespace Engarde_Synthesis
                 if (raceData.LowAttacks)
                 {
                     raceCopy.Attacks.Where(IsValidAttack).ForEach(x =>
-                        setAttackType(x, Engarde.Keyword.MCT_VerticalAttack));
+                        SetAttackType(x, Engarde.Keyword.MCT_VerticalAttack));
                 }
 
                 if (raceData.RemoveSpell)

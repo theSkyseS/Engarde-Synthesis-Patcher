@@ -1,3 +1,4 @@
+using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Skyrim;
 
 namespace Mutagen.Bethesda.FormKeys.SkyrimSE
@@ -6,7 +7,6 @@ namespace Mutagen.Bethesda.FormKeys.SkyrimSE
     {
         public static class Spell
         {
-            public readonly static ModKey ModKey = ModKey.FromNameAndExtension("Savage Skyrim Std.esp");
             private static FormLink<ISpellGetter> Construct(uint id) => new(ModKey.MakeFormKey(id));
             public static FormLink<ISpellGetter> __Ab_Animal_Excl_MammothCrushAbilityCloak => Construct(0x1a499);
             public static FormLink<ISpellGetter> __AA_Animal_ForceThrow_Small => Construct(0x2366d);
