@@ -97,7 +97,7 @@ namespace Engarde_Synthesis
         */
         private static void SetStagger(this IWeapon weaponCopy, int defaultWeight, float multiplier)
         {
-            float weight = weaponCopy.BasicStats!.Weight;
+            var weight = weaponCopy.BasicStats!.Weight;
             if (weight <= 0)
             {
                 weaponCopy.BasicStats!.Weight = defaultWeight;
@@ -147,6 +147,10 @@ namespace Engarde_Synthesis
                     case WeaponArmorPenetration.Strong:
                         weaponCopy.AddKeyword(Engarde.Keyword.MCT_PenetratesArmorKW);
                         break;
+                    case WeaponArmorPenetration.None:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(armorPenetration), armorPenetration, null);
                 }
             }
 
@@ -612,7 +616,7 @@ namespace Engarde_Synthesis
         {
             List<IWeaponGetter> weaponsToPatch = state.LoadOrder.PriorityOrder.Weapon().WinningOverrides()
                 .AsParallel()
-                .Where(weapon => weapon.Template.IsNull && weapon.Data != null && !weapon.EditorID!.StartsWith("REQ_Dummy_"))
+                .Where(weapon => weapon.Template.IsNull && weapon.BasicStats !=null && weapon.Data != null && !weapon.EditorID!.StartsWith("REQ_Dummy_"))
                 .ToList();
             foreach (var weaponCopy in weaponsToPatch.Select(weapon => state.PatchMod.Weapons.GetOrAddAsOverride(weapon)))
             {
