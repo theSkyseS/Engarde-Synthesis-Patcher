@@ -114,9 +114,9 @@ namespace Engarde_Synthesis
          </summary>
         */
         private static void ChangeWeapon(this IWeapon weaponCopy, int defaultWeight, float damageMult = 1,
-                float reachMult = 1, float speedMult = 1, float critMult = 1, float staggerMult = 1,
-                WeaponCritChance critChance = WeaponCritChance.None,
-                WeaponArmorPenetration armorPenetration = WeaponArmorPenetration.None)
+            float reachMult = 1, float speedMult = 1, float critMult = 1, float staggerMult = 1,
+            WeaponCritChance critChance = WeaponCritChance.None,
+            WeaponArmorPenetration armorPenetration = WeaponArmorPenetration.None)
         {
             IFormLinkGetter<IKeywordGetter> critKey = critChance switch
             {
@@ -159,8 +159,8 @@ namespace Engarde_Synthesis
             weaponCopy.SetStagger(defaultWeight, staggerMult);
             weaponCopy.Critical ??= new CriticalData();
             weaponCopy.Critical.Damage = (ushort) Math.Round(weaponCopy.BasicStats!.Damage *
-                                                              _settings.Value.weaponSettings.weaponCritDamageMult *
-                                                              critMult);
+                                                             _settings.Value.weaponSettings.weaponCritDamageMult *
+                                                             critMult);
         }
 
         /**
@@ -777,11 +777,12 @@ namespace Engarde_Synthesis
         {
             bool Predicate(INpcGetter npc)
             {
+                if (!npc.Race.IsNull) return false;
                 string npcRaceEdid = npc.Race.Resolve(state.LinkCache).EditorID!;
                 return !npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.SpellList) &&
-                       !npc.Race.IsNull && !npcRaceEdid.IsNullOrEmpty() && (npc.Attacks.Count != 0 ||
-                                                                            npcRaceEdid.Contains("GiantRace") ||
-                                                                            npcRaceEdid.Contains("LurkerRace"));
+                       !npcRaceEdid.IsNullOrEmpty() && (npc.Attacks.Count != 0 ||
+                                                        npcRaceEdid.Contains("GiantRace") ||
+                                                        npcRaceEdid.Contains("LurkerRace"));
             }
 
             List<INpcGetter> npcsToPatch = state.LoadOrder.PriorityOrder.Npc().WinningOverrides()
