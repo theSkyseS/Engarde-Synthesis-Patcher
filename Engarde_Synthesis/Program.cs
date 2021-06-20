@@ -777,7 +777,7 @@ namespace Engarde_Synthesis
         {
             bool Predicate(INpcGetter npc)
             {
-                if (!npc.Race.IsNull) return false;
+                if (npc.Race.IsNull) return false;
                 string npcRaceEdid = npc.Race.Resolve(state.LinkCache).EditorID!;
                 return !npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.SpellList) &&
                        !npcRaceEdid.IsNullOrEmpty() && (npc.Attacks.Count != 0 ||
