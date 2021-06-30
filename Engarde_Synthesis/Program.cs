@@ -1598,8 +1598,11 @@ namespace Engarde_Synthesis
 
             static void TuneLDragonSpell(ISpell spell, int increment, int duration)
             {
+                if (spell.Effects.Count != 5)
+                    Console.WriteLine(
+                        $"\nWarning: some mod in your Load Order is changed {spell.EditorID}. You must check in xEdit if the values are set correctly");
                 spell.Flags |= SpellDataFlag.IgnoreResistance;
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < spell.Effects.Count; i++)
                 {
                     spell.Effects[i].Data!.Magnitude = 20 + i * increment;
                     spell.Effects[i].Data!.Duration = duration;
