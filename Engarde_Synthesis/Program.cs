@@ -555,10 +555,19 @@ namespace Engarde_Synthesis
 
         private static void PatchArmors(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            static bool Predicate(IArmorGetter armor) =>
-                (!armor.BodyTemplate?.Flags.HasFlag(BodyTemplate.Flag.NonPlayable) ?? false) &&
-                armor.TemplateArmor.IsNull &&
-                (armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? false);
+            static bool Predicate(IArmorGetter armor)
+            {
+                try
+                {
+                    return (!armor.BodyTemplate?.Flags.HasFlag(BodyTemplate.Flag.NonPlayable) ?? false) &&
+                           armor.TemplateArmor.IsNull &&
+                           (armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? false);
+                }
+                catch (ArgumentException e)
+                {
+                    throw new ArgumentException($"Broken record encountered: {armor.FormKey}", e);
+                }
+            }
 
             List<IArmorGetter> armorToPatch = state.LoadOrder.PriorityOrder.Armor().WinningOverrides()
                 .AsParallel()
@@ -2743,7 +2752,7 @@ namespace Engarde_Synthesis
 
         private static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            var configFile = File.ReadAllText(state.RetrieveConfigFile("config.json"));
+            string configFile = File.ReadAllText(state.RetrieveConfigFile("config.json"));
             var config = JsonConvert.DeserializeObject<Config>(configFile, new JsonSerializerSettings
             {
                 NullValueHandling = NullValueHandling.Ignore
