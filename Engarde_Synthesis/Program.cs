@@ -555,10 +555,19 @@ namespace Engarde_Synthesis
 
         private static void PatchArmors(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            static bool Predicate(IArmorGetter armor) =>
-                (!armor.BodyTemplate?.Flags.HasFlag(BodyTemplate.Flag.NonPlayable) ?? false) &&
-                armor.TemplateArmor.IsNull &&
-                (armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? false);
+            static bool Predicate(IArmorGetter armor)
+            {
+                try
+                {
+                    return (!armor.BodyTemplate?.Flags.HasFlag(BodyTemplate.Flag.NonPlayable) ?? false) &&
+                           armor.TemplateArmor.IsNull &&
+                           (armor.BodyTemplate?.FirstPersonFlags.HasFlag(BipedObjectFlag.Body) ?? false);
+                }
+                catch (ArgumentException e)
+                {
+                    throw new ArgumentException($"Broken record encountered: {armor.FormKey}", e);
+                }
+            }
 
             List<IArmorGetter> armorToPatch = state.LoadOrder.PriorityOrder.Armor().WinningOverrides()
                 .AsParallel()
@@ -778,11 +787,22 @@ namespace Engarde_Synthesis
             bool Predicate(INpcGetter npc)
             {
                 if (npc.Race.IsNull) return false;
-                string npcRaceEdid = npc.Race.Resolve(state.LinkCache).EditorID!;
+                if (!npc.Race.TryResolve(state.LinkCache, out var race))
+                {
+                    Console.WriteLine($"NPC Record reference another record that doesn't exist:{npc.FormKey}");
+                    return false;
+                }
+
+                string? editorId = race.EditorID;
+                if (editorId == null)
+                {
+                    return false;
+                }
+
                 return !npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.SpellList) &&
-                       !npcRaceEdid.IsNullOrEmpty() && (npc.Attacks.Count != 0 ||
-                                                        npcRaceEdid.Contains("GiantRace") ||
-                                                        npcRaceEdid.Contains("LurkerRace"));
+                       !editorId.IsNullOrEmpty() && (npc.Attacks.Count != 0 ||
+                                                     editorId.Contains("GiantRace") ||
+                                                     editorId.Contains("LurkerRace"));
             }
 
             List<INpcGetter> npcsToPatch = state.LoadOrder.PriorityOrder.Npc().WinningOverrides()
@@ -2743,7 +2763,7 @@ namespace Engarde_Synthesis
 
         private static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            var configFile = File.ReadAllText(state.RetrieveConfigFile("config.json"));
+            string configFile = File.ReadAllText(state.RetrieveConfigFile("config.json"));
             var config = JsonConvert.DeserializeObject<Config>(configFile, new JsonSerializerSettings
             {
                 NullValueHandling = NullValueHandling.Ignore
