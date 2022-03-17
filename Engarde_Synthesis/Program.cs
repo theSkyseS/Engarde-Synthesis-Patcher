@@ -1618,11 +1618,12 @@ namespace Engarde_Synthesis
                 return patcherState.PatchMod.Spells.GetOrAddAsOverride(spellLink, patcherState.LinkCache);
             }
 
-            static void TuneLDragonSpell(ISpell spell, int increment, int duration)
+            void TuneLDragonSpell(ISpell spell, int increment, int duration)
             {
-                if (spell.Effects.Count != 5)
+                
+                if (spell.Effects.Count != state.LinkCache.Resolve<ISpellGetter>(spell.FormKey, ResolveTarget.Origin).Effects.Count)
                     Console.WriteLine(
-                        $"\nWarning: some mod in your Load Order is changed {spell.EditorID}. You must check in xEdit if the values are set correctly");
+                        $"\nWarning: some mod in your Load Order has changed the number of effects of the {spell.FormKey}:{spell.EditorID}. You must check in xEdit if the values are set correctly");
                 spell.Flags |= SpellDataFlag.IgnoreResistance;
                 for (int i = 0; i < spell.Effects.Count; i++)
                 {
