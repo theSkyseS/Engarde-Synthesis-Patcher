@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Engarde_Synthesis.Settings;
 using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Aspects;
+using Mutagen.Bethesda.Plugins.Cache;
 using Mutagen.Bethesda.Plugins.Order;
 using Newtonsoft.Json;
 using Noggog;
@@ -997,7 +998,8 @@ namespace Engarde_Synthesis
             if (_settings.Value.basicAttacks.dwAttackTweaks)
             {
                 IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.BlockingStart);
-                idleCopy.RelatedIdles[1] = originalLeftHandAttackSibling;
+                int index = idleCopy.RelatedIdles.FindIndex(x => x.Equals(Skyrim.IdleAnimation.LeftHandAttack));
+                idleCopy.RelatedIdles[index] = originalLeftHandAttackSibling;
             }
 
             if (_settings.Value.basicAttacks.basicAttackTweaks && _settings.Value.basicAttacks.spellSwordBlocking)
@@ -1658,7 +1660,7 @@ namespace Engarde_Synthesis
                 }
             };
 
-            var spellCopy = CopySpell(state, Engarde.Spell.MCT_PowerAttackCoolDownSpell);
+            ISpell spellCopy = CopySpell(state, Engarde.Spell.MCT_PowerAttackCoolDownSpell);
             spellCopy.Effects[0].Data!.Duration = _settings.Value.powerAttacks.powerAttackCooldown;
 
             spellCopy = CopySpell(state, Engarde.Spell.MCT_NoStaminaRegenWhileRunning);
