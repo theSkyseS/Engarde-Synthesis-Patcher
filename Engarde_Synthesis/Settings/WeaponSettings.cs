@@ -15,8 +15,8 @@ namespace Engarde_Synthesis.Settings
         public float weaponCritDamageMult { get; set; } = 1f;
         [SynthesisSettingName("Bladed weapons are weak to armored foes")]
         public bool weakToArmor { get; set; } = true;
-		[SynthesisSettingName("Bladed weapons have an innate crit chance")]
-		public bool bladedCrit { get; set; } = true;
+        [SynthesisSettingName("Bladed weapons have an innate crit chance")]
+        public bool bladedCrit { get; set; } = true;
         [SynthesisSettingName("Blunt weapons damages stamina and power attack knocks down low stamina foes")]
         public bool bluntKnocksDown { get; set; } = true;
     }
