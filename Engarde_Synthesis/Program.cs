@@ -134,6 +134,7 @@ namespace Engarde_Synthesis
                 }
             }
 
+
             if (weaponCopy.Data!.Flags.HasFlag(WeaponData.Flag.BoundWeapon))
             {
                 weaponCopy.BasicStats!.Weight = defaultWeight;
