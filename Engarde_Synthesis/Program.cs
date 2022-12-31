@@ -119,18 +119,20 @@ namespace Engarde_Synthesis
             WeaponCritChance critChance = WeaponCritChance.None,
             WeaponArmorPenetration armorPenetration = WeaponArmorPenetration.None)
         {
-            IFormLinkGetter<IKeywordGetter> critKey = critChance switch
-            {
-                WeaponCritChance.Low => Engarde.Keyword.MCT_CanCritLow,
-                WeaponCritChance.Medium => Engarde.Keyword.MCT_CanCritMed,
-                WeaponCritChance.High => Engarde.Keyword.MCT_CanCritHigh,
-                _ => new FormLink<IKeywordGetter>(FormKey.Null)
-            };
-            if (!critKey.IsNull)
-            {
-                weaponCopy.AddKeyword(critKey);
-            }
-
+			if ( _settings.Value.weaponSettings.bladedCrit)
+			{
+				IFormLinkGetter<IKeywordGetter> critKey = critChance switch
+				{
+					WeaponCritChance.Low => Engarde.Keyword.MCT_CanCritLow,
+					WeaponCritChance.Medium => Engarde.Keyword.MCT_CanCritMed,
+					WeaponCritChance.High => Engarde.Keyword.MCT_CanCritHigh,
+					_ => new FormLink<IKeywordGetter>(FormKey.Null)
+				};
+				if (!critKey.IsNull)
+				{
+					weaponCopy.AddKeyword(critKey);
+				}
+			}
 
             if (weaponCopy.Data!.Flags.HasFlag(WeaponData.Flag.BoundWeapon))
             {
