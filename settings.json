@@ -4,6 +4,7 @@
   "basicAttacks": {
     "basicAttackTweaks": true,
     "dwAttackTweaks": true,
+    "dwAlternateSwings": false,
     "h2HAttackTweaks": true,
     "spellSwordBlocking": true
   },
