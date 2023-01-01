@@ -959,7 +959,10 @@ namespace Engarde_Synthesis
             {
                 IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.LeftHandAttack);
                 originalLeftHandAttackSibling.SetTo(idleCopy.RelatedIdles[1]);
-                idleCopy.RelatedIdles[0] = nonMountedCombatRight;
+                if (_settings.Value.basicAttacks.dwAlternateSwings)
+                { 
+                    idleCopy.RelatedIdles[0] = nonMountedCombatRight;
+                }
                 idleCopy.RelatedIdles[1] = originalNormalAttackSibling;
                 idleCopy.Conditions.Add(lastAttackIsRightCondition);
                 idleCopy.Conditions.Add(staminaCondition);
