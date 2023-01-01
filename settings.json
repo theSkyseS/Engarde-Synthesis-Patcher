@@ -1,0 +1,64 @@
+{
+  "engardeVersion": "4.2.1",
+  "fixAttackSpeed": true,
+  "basicAttacks": {
+    "basicAttackTweaks": true,
+    "dwAttackTweaks": true,
+    "h2HAttackTweaks": true,
+    "spellSwordBlocking": true
+  },
+  "powerAttacks": {
+    "powerAttackTweaks": true,
+    "powerAttackCooldown": 0,
+    "forwardDamageMult": 1.0,
+    "sideDamageMult": 1.0
+  },
+  "defensiveActions": {
+    "defensiveActions": false,
+    "heavyArmorDodge": "Roll",
+    "lightArmorDodge": "Step"
+  },
+  "staggerSettings": {
+    "weaponStagger": false,
+    "bowStagger": false,
+    "critStagger": false
+  },
+  "staminaSettings": {
+    "runningStaminaRatePenalty": 300,
+    "minimumStamina": 0,
+    "minimumDodgeStamina": 0
+  },
+  "npcSettings": {
+    "playerKillMoveImmune": true,
+    "staminaManagement": false,
+    "npcDodging": false,
+    "npcAttackWindup": false,
+    "angularAccelerationMult": 7,
+    "unarmedDamageMult": 1.0,
+    "addArmorToArmored": true,
+    "werewolfTweaks": true,
+    "giantTweaks": true,
+    "dragonTweaks": true
+  },
+  "movementSettings": {
+    "attackCommitment": false,
+    "patchSpeed": false,
+    "oneHandSpeed": 270,
+    "twoHandSpeed": 220,
+    "bowSpeed": 240
+  },
+  "weaponSettings": {
+    "weaponSpeedMult": 1.0,
+    "weaponReachMult": 1.0,
+    "weaponDamageMult": 1.0,
+    "weaponCritDamageMult": 0.5,
+    "weakToArmor": false,
+    "bladedCrit": false,
+    "bluntKnocksDown": false
+  },
+  "combatFocus": {
+    "worldSpeedMult": 1.0,
+    "playerSpeedMult": 1.0,
+    "durationMult": 1.0
+  }
+}
