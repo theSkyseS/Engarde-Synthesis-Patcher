@@ -20,9 +20,9 @@
     "lightArmorDodge": "Step"
   },
   "staggerSettings": {
-    "weaponStagger": false,
-    "bowStagger": false,
-    "critStagger": false
+    "weaponStagger": true,
+    "bowStagger": true,
+    "critStagger": true
   },
   "staminaSettings": {
     "runningStaminaRatePenalty": 300,
@@ -42,8 +42,8 @@
     "dragonTweaks": true
   },
   "movementSettings": {
-    "attackCommitment": false,
-    "patchSpeed": false,
+    "attackCommitment": true,
+    "patchSpeed": true,
     "oneHandSpeed": 270,
     "twoHandSpeed": 220,
     "bowSpeed": 240
@@ -53,9 +53,9 @@
     "weaponReachMult": 1.0,
     "weaponDamageMult": 1.0,
     "weaponCritDamageMult": 0.5,
-    "weakToArmor": false,
-    "bladedCrit": false,
-    "bluntKnocksDown": false
+    "weakToArmor": true,
+    "bladedCrit": true,
+    "bluntKnocksDown": true
   },
   "combatFocus": {
     "worldSpeedMult": 1.0,
