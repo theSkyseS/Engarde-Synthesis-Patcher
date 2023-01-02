@@ -15,7 +15,7 @@
     "sideDamageMult": 1.0
   },
   "defensiveActions": {
-    "defensiveActions": false,
+    "defensiveActions": true,
     "heavyArmorDodge": "Roll",
     "lightArmorDodge": "Step"
   },
