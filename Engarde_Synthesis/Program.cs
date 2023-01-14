@@ -912,9 +912,9 @@ namespace Engarde_Synthesis
                 idleCopy.Conditions.Last().Flags = 0;
                 idleCopy.Conditions.Add(staminaCondition);
                 idleCopy.Conditions.Add(incorporealCheckCondition);
+                originalNormalAttackSibling.SetTo(idleCopy.RelatedIdles[1]);
                 if (_settings.Value.basicAttacks.dwAttackTweaks && _settings.Value.basicAttacks.dwAlternateSwings)
                 {
-                    originalNormalAttackSibling.SetTo(idleCopy.RelatedIdles[1]);
                     idleCopy.RelatedIdles[1] = leftHandAttack;
                 }
 
