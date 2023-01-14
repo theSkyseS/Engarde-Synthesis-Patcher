@@ -920,9 +920,9 @@ namespace Engarde_Synthesis
 
                 idleCopy = CopyIdle(state, Skyrim.IdleAnimation.AttackRightH2H);
                 idleCopy.Conditions.Add(staminaCondition);
+                originalH2HAttackSibling.SetTo(idleCopy.RelatedIdles[1]);
                 if (_settings.Value.basicAttacks.h2HAttackTweaks && _settings.Value.basicAttacks.dwAlternateSwings)
                 {
-                    originalH2HAttackSibling.SetTo(idleCopy.RelatedIdles[1]);
                     idleCopy.RelatedIdles[1] = mctAttackLeftH2H;
                 }
 
@@ -955,7 +955,7 @@ namespace Engarde_Synthesis
                 idleCopy.AnimationEvent = "recoilLargeStart";
             }
 
-            if (_settings.Value.basicAttacks.basicAttackTweaks && _settings.Value.basicAttacks.dwAttackTweaks)
+            if (_settings.Value.basicAttacks.basicAttackTweaks && _settings.Value.basicAttacks.dwAttackTweaks && _settings.Value.basicAttacks.dwAlternateSwings)
             {
                 IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.LeftHandAttack);
                 originalLeftHandAttackSibling.SetTo(idleCopy.RelatedIdles[1]);
