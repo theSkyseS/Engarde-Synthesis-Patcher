@@ -912,7 +912,7 @@ namespace Engarde_Synthesis
                 idleCopy.Conditions.Last().Flags = 0;
                 idleCopy.Conditions.Add(staminaCondition);
                 idleCopy.Conditions.Add(incorporealCheckCondition);
-                if (_settings.Value.basicAttacks.dwAttackTweaks)
+                if (_settings.Value.basicAttacks.dwAttackTweaks && _settings.Value.basicAttacks.dwAlternateSwings)
                 {
                     originalNormalAttackSibling.SetTo(idleCopy.RelatedIdles[1]);
                     idleCopy.RelatedIdles[1] = leftHandAttack;
@@ -920,7 +920,7 @@ namespace Engarde_Synthesis
 
                 idleCopy = CopyIdle(state, Skyrim.IdleAnimation.AttackRightH2H);
                 idleCopy.Conditions.Add(staminaCondition);
-                if (_settings.Value.basicAttacks.h2HAttackTweaks)
+                if (_settings.Value.basicAttacks.h2HAttackTweaks && _settings.Value.basicAttacks.dwAlternateSwings)
                 {
                     originalH2HAttackSibling.SetTo(idleCopy.RelatedIdles[1]);
                     idleCopy.RelatedIdles[1] = mctAttackLeftH2H;
@@ -959,10 +959,8 @@ namespace Engarde_Synthesis
             {
                 IIdleAnimation idleCopy = CopyIdle(state, Skyrim.IdleAnimation.LeftHandAttack);
                 originalLeftHandAttackSibling.SetTo(idleCopy.RelatedIdles[1]);
-                if (_settings.Value.basicAttacks.dwAlternateSwings)
-                { 
-                    idleCopy.RelatedIdles[0] = nonMountedCombatRight;
-                }
+
+                idleCopy.RelatedIdles[0] = nonMountedCombatRight;
                 idleCopy.RelatedIdles[1] = originalNormalAttackSibling;
                 idleCopy.Conditions.Add(lastAttackIsRightCondition);
                 idleCopy.Conditions.Add(staminaCondition);
