@@ -53,9 +53,9 @@
     "weaponReachMult": 1.0,
     "weaponDamageMult": 1.3,
     "weaponCritDamageMult": 0.5,
-    "weakToArmor": true,
-    "bladedCrit": true,
-    "bluntKnocksDown": true
+    "weakToArmor": false,
+    "bladedCrit": false,
+    "bluntKnocksDown": false
   },
   "combatFocus": {
     "worldSpeedMult": 1.0,
