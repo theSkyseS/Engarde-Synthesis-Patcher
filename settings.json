@@ -52,7 +52,7 @@
     "weaponSpeedMult": 1.0,
     "weaponReachMult": 1.0,
     "weaponDamageMult": 1.3,
-    "weaponCritDamageMult": 1.0,
+    "weaponCritDamageMult": 0.5,
     "weakToArmor": true,
     "bladedCrit": true,
     "bluntKnocksDown": true
