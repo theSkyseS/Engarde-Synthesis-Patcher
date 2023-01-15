@@ -1,8 +1,0 @@
-[81.6] Starting Cloning driver repository
-[81.6] Failed to check out driver repository because the remote path was not supplied: Path does not point to a valid repository. LibGit2Sharp.LibGit2SharpException: this remote has never connected
-   at LibGit2Sharp.Core.Ensure.HandleError(Int32 result)
-   at LibGit2Sharp.Core.Proxy.git_remote_ls(Repository repository, RemoteHandle remote)
-   at LibGit2Sharp.Repository.ListRemoteReferences(String url, CredentialsHandler credentialsProvider)
-   at LibGit2Sharp.Repository.ListRemoteReferences(String url)
-   at Noggog.GitRepository.CheckOriginRepoIsValid.IsValidRepository(String path)
-[81.6] Completed Cloning driver repository in 00:00:00.0024687 (2ms)
