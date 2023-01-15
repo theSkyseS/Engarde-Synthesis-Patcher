@@ -1,4 +1,0 @@
-[49.5] Starting Cloning driver repository
-[49.5] Starting runner repo: C:\Git\Engarde-Synthesis-Patcher\
-[49.6] Completed runner repo: C:\Git\Engarde-Synthesis-Patcher\ in 00:00:00.0967608 (96ms)
-[49.6] Completed Cloning driver repository in 00:00:00.1234632 (123ms)
